@@ -49,6 +49,13 @@ The workflow demonstrates how you can:
 
 ## ▶️ How to Run
 
+0. **install additional dependencies**
+
+    ```bash
+    cd examples/resource_benchmark
+    uv pip install -r requirements.txt
+    ```
+
 1. **Set environment variables** for online endpoints in a `.env` file:
 
    ```bash
