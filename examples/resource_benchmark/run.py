@@ -1,7 +1,7 @@
 import argparse
 import os
 
-import torch
+import GPUtil
 from dotenv import load_dotenv
 
 from async_graph_bench import BenchmarkManager, NodeConfig
@@ -102,7 +102,8 @@ if __name__ == "__main__":
 
     else:  # offline vllm multi instance
         models.append(args.model)
-        amount_models = torch.cuda.device_count() / args.llm_args["tensor_parallel_size"]
+        device_count = len(GPUtil.getAvailable())
+        amount_models = device_count / args.llm_args["tensor_parallel_size"]
         models.append(f"x{amount_models}")
         resource_builder = get_vllm_multi_instance_builder(
             args.model, llm_args=args.llm_args, use_chat_template=True, reasoning_parser_mode=None

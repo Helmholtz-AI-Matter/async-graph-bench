@@ -45,17 +45,18 @@ def get_vllm_builder(model_id: str, llm_args: Dict, use_chat_template=True, reas
 
 def get_vllm_multi_instance_builder(model_id: str, llm_args: dict, use_chat_template=True,
                                           reasoning_parser_mode=None):
-    import torch
+    import GPUtil
+    device_count = len(GPUtil.getAvailable())
     from async_graph_bench.models.multi_instances.vllm import start_workers, RemoteVLLMModel
     async def builder(env):
         if not hasattr(env, "main_model_pool"):
-            print("GPUs detected for usage of worker building: ", torch.cuda.device_count())
+            print("GPUs detected for usage of worker building: ", device_count)
 
             # Start multiple vLLM workers across available GPUs
             worker_clients, close = await start_workers(
                 model_id,
                 llm_kwargs=llm_args,
-                gpus=list(range(torch.cuda.device_count())),
+                gpus=list(range(device_count)),
                 gpus_per_worker=llm_args["tensor_parallel_size"],
             )
 
