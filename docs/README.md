@@ -1,6 +1,16 @@
-# ReadMe
+# Documentation
+
+## Dependencies 
+
+- gnu make
+- python and the following modules
+```bash
+pip install sphinx myst-parser sphinx_external_toc sphinx-autodoc-typehints sphinx-rtd-theme
+```
 
 ## Building the Docs locally
+
+First, build the library, then issue the following command from the repo root:
 
 ```bash
 sphinx-build -b html docs/source docs/build
