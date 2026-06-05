@@ -7,7 +7,7 @@ This framework can be installed either directly from GitHub or via PyPI.
 ### 1. From GitHub
 
 ```bash
-pip install git+https://github.com/USERNAME/REPO_NAME.git TODO
+pip install git+https://github.com/Helmholtz-AI-Matter/async-graph-bench
 ```
 
 ### 2. From PyPI
@@ -21,7 +21,7 @@ pip install PACKAGE_NAME TODO
 
 * **Python 3.11+** is required.
 
-Before installation, ensure you have a compatible Python environment (e.g., using `venv` or `conda`).
+Before installation, ensure you have a compatible Python environment (e.g., using `venv`, `uv` or `conda`).
 
 ---
 
