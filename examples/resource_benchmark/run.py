@@ -76,9 +76,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     data_source = PromptDataSource()
 
+    # prepare list of models
     models = []
     resource_builder = None
-
     if args.resources.startswith(("endpoint", "both-endpoints")):
         ids = {"endpoint-1": [1], "endpoint-2": [2], "both-endpoints": [1, 2]}.get(args.resources, [1])
         endpoints = []
@@ -112,6 +112,7 @@ if __name__ == "__main__":
     result_path = f"data/{args.resources}-{'--'.join(models)}-{args.batch_size}"
     os.makedirs(result_path, exist_ok=True)
 
+    # prepare analysis
     available_stat_calculators = [
         NodeConfig(
             QueryModel(max_tokens=1024),
@@ -123,6 +124,7 @@ if __name__ == "__main__":
         ),
     ]
 
+    # setup BenchmarkManager to coordinate runs
     man = BenchmarkManager(
         iterations=args.iterations,  # Adjust as needed (e.g., 50 iterations * 10 prompts = 500 total queries per run)
         data_source=data_source,
@@ -132,9 +134,11 @@ if __name__ == "__main__":
         raise_exceptions=True,
     )
 
+    # viz exectuation graph
     if man.base_adg:
         visualize_graph(man.base_adg, format="svg")
 
+    # execute benchmark
     man.run_benchmark()
 
     store = man.store_per_node["QueryModel"]
@@ -143,6 +147,7 @@ if __name__ == "__main__":
     report = man.get_report()
     print(report.to_table())
 
+    # calculate extra metrics
     node_delta = report.nodes["QueryModel"].delta  # Total amount of queries in this run
     time_per_query = report.total_time / node_delta
 
