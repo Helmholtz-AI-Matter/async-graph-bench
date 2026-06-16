@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 import GPUtil
 from dotenv import load_dotenv
@@ -26,7 +27,7 @@ print("\n\n")
 
 NodeConfig.base_config = {"queue_size": 100, "prop_name": "estimations"}
 
-if __name__ == "__main__":
+def main(argv):
     parser = argparse.ArgumentParser(
         description=(
             "Run a simple benchmark comparing LLM inference across different resource configurations. "
@@ -78,7 +79,7 @@ if __name__ == "__main__":
         help="Print curl commands for HTTP requests without executing them. Only applies to OpenAI endpoint resources."
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     data_source = PromptDataSource()
 
     # prepare list of models
@@ -148,6 +149,11 @@ if __name__ == "__main__":
     # execute benchmark
     man.run_benchmark()
 
+    # gracefully exist here for a dryrun
+    if args.dryrun:
+        print("Dryrun done.")
+        return 0
+
     store = man.store_per_node["QueryModel"]
     token_lengths = [item["token_lengths"] for item in store.iter_items()]
 
@@ -168,3 +174,9 @@ if __name__ == "__main__":
             "Average Token Length": sum(token_lengths) / len(token_lengths),
         },
     )
+    return 0
+
+if __name__ == "__main__":
+    #TODO: how to catch the help statement and return 1
+    returnvalue = main(sys.argv[1:])
+    sys.exit(returnvalue)
