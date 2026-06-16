@@ -18,23 +18,30 @@ def _should_dryrun() -> bool:
     return os.environ.get("ASYNC_GRAPH_DRYRUN") == "1"
 
 
-def _print_curl_command(url: str, headers: dict, payload: dict) -> None:
+def _print_curl_command(url: str, headers: dict, payload: dict,
+                        enforce_url_suffix: bool = True) -> None:
     """Print a curl command that replicates the API call."""
     # Build curl headers
     curl_headers = []
     for header, value in headers.items():
-        curl_headers.append(f"-H '{header}: {value}'")
-    
+        if 'authorization' in header.lower():
+            curl_headers.append('-H "Authorization: Bearer ${OPENAI_API_KEY}" \\')
+        else:
+            curl_headers.append(f"-H '{header}: {value}' \\")
+
+    if enforce_url_suffix:
+        if not (url.endswith('completions') or url.endswith('completions/')):
+            suffix = "chat/completions" if url.endswith("/") else "/chat/completions"
+            url = url + suffix
     # Build curl command
     curl_parts = [
-        "curl",
-        " \\\n  ".join(curl_headers),
-        f"-X POST",
-        f"'{url}'",
+        f"curl '{url}' \\",
+        "\n".join(curl_headers),
+#        f"-X POST \\",
         f"-d '{json.dumps(payload, indent=2)}'"
     ]
     
-    curl_cmd = "\n  ".join(curl_parts)
+    curl_cmd = "\n".join(curl_parts)
     print(f"\n{'='*80}")
     print(f"DRYRUN - HTTP Request that would be made:")
     print(f"{'='*80}")
