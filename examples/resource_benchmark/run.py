@@ -72,6 +72,11 @@ if __name__ == "__main__":
         default=2,
         help="Number of iterations computed per item (10 items total) during the benchmark (default: 2)."
     )
+    parser.add_argument(
+        "--dryrun",
+        action="store_true",
+        help="Print curl commands for HTTP requests without executing them. Only applies to OpenAI endpoint resources."
+    )
 
     args = parser.parse_args()
     data_source = PromptDataSource()
@@ -93,6 +98,8 @@ if __name__ == "__main__":
                 )
             )
         resource_builder = get_openai_api_builder(endpoints)
+        if args.dryrun:
+            os.environ["ASYNC_GRAPH_DRYRUN"] = "1"
 
     elif args.resources == "offline-vllm":
         models.append(args.model)
