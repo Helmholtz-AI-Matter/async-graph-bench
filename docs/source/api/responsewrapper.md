@@ -1,4 +1,4 @@
-# [`ResponseWrapper`](../api/responsewrapper.md)`
+# `ResponseWrapper`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.models.ResponseWrapper

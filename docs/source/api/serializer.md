@@ -1,4 +1,4 @@
-# [`Serializer`](../api/serializer.md)
+# `Serializer`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.stores.serializers.Serializer

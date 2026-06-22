@@ -1,4 +1,4 @@
-# [`Node`](../api/node.md)
+# `Node`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.Node

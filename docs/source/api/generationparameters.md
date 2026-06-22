@@ -1,4 +1,4 @@
-# [`GenerationParameters`](../api/generationparameters.md)
+# `GenerationParameters`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.GenerationParameters
