@@ -183,6 +183,10 @@ class BenchmarkManager:
         For each step, prepares a step-specific ADG, deactivates irrelevant nodes,
         and launches a corresponding BenchmarkRun. Results and exceptions are collected
         after each step. Subsequent steps are aborted if any exception occurs.
+
+        Note:
+            This method internally calls asyncio.run() via AsyncExecutor.execute().
+            It must NOT be invoked from within an already running asyncio event loop.
         """
         assert len(self.runs) == 0, "Cannot rerun same benchmark instance!"
         last_stores = self.store_per_node

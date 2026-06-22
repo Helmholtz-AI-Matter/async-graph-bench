@@ -16,8 +16,10 @@ def parse_gpt_oss_reasoning(tokens):
 
     def flush(end_idx):
         nonlocal current_channel, start_idx
-        if current_channel and start_idx is not None:
+        if start_idx is not None:
             if current_channel == "final":
+                result["message"] = (start_idx, end_idx)
+            elif current_channel is None:
                 result["message"] = (start_idx, end_idx)
             else:
                 result["reasoning"].append((start_idx, end_idx, current_channel))
