@@ -9,7 +9,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("..src.async_graph_bench"))
+sys.path.insert(0, os.path.abspath("../src"))
 
 project = "async_graph_benchmarking"
 copyright = "2025, Philip Müller"

@@ -1,4 +1,4 @@
-# [`Model`](../api/model.md)
+# `Model`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.models.Model

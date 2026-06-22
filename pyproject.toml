@@ -38,6 +38,13 @@ dependencies = { file = ["requirements.txt"] }
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.9"]
+docs = [
+    "sphinx",
+    "myst-parser",
+    "sphinx-external-toc",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

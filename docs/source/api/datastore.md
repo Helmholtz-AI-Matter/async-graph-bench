@@ -1,4 +1,4 @@
-# [`DataStore`](../api/datastore.md)
+# `DataStore`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.stores.DataStore

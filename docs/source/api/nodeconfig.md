@@ -1,4 +1,4 @@
-# [`NodeConfig`](../api/nodeconfig.md)
+# `NodeConfig`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.NodeConfig

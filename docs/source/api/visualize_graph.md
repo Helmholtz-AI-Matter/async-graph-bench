@@ -1,4 +1,4 @@
-# [`visualize_graph`](../api/visualize_graph.md)
+# `visualize_graph`
 
 ```{eval-rst}
 .. autoclass:: async_graph_bench.visualize_graph
