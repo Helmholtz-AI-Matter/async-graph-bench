@@ -1,19 +1,56 @@
 import asyncio
 import os
+import logging
+import json
 from typing import Dict
+from types import SimpleNamespace
+from openai import AsyncOpenAI
 
 from .openai_api_response_wrapper import OpenAIAPIResponseWrapper
 
 from .abstract_classes import Model, GenerationParameters
 
-try:
-    from openai import AsyncOpenAI
-except ImportError as e:
-    raise ImportError("To use this functionality, you need to install the 'openai' module") from e
-
 import logging
 
-logging.getLogger("httpx").setLevel(logging.WARNING)
+
+def _should_dryrun() -> bool:
+    """Check if dryrun mode is enabled via environment variable."""
+    return os.environ.get("ASYNC_GRAPH_DRYRUN") == "1"
+
+
+def _print_curl_command(url: str, headers: dict, payload: dict,
+                        enforce_url_suffix: bool = True) -> None:
+    """Print a curl command that replicates the API call."""
+    # Build curl headers
+    curl_headers = []
+    for header, value in headers.items():
+        if 'authorization' in header.lower():
+            curl_headers.append('-H "Authorization: Bearer ${OPENAI_API_KEY}" \\')
+        else:
+            curl_headers.append(f"-H '{header}: {value}' \\")
+
+    if enforce_url_suffix:
+        if not (url.endswith('completions') or url.endswith('completions/')):
+            suffix = "chat/completions" if url.endswith("/") else "/chat/completions"
+            url = url + suffix
+    # Build curl command
+    curl_parts = [
+        f"curl '{url}' \\",
+        "\n".join(curl_headers),
+#        f"-X POST \\",
+        f"-d '{json.dumps(payload, indent=2)}'"
+    ]
+    
+    curl_cmd = "\n".join(curl_parts)
+    print(f"\n{'='*80}")
+    print(f"DRYRUN - HTTP Request that would be made:")
+    print(f"{'='*80}")
+    print(f"URL: {url}")
+    print(f"Payload:\n{json.dumps(payload, indent=2)}")
+    print(f"\nCurl command:")
+    print(curl_cmd)
+    print(f"{'='*80}\n")
+
 
 def sampling_params_from_generation_params(generation_params: GenerationParameters) -> Dict:
     params = generation_params.to_dict()
@@ -22,6 +59,28 @@ def sampling_params_from_generation_params(generation_params: GenerationParamete
             params["top_logprobs"] = min(params["logprobs"], 20)
         params["logprobs"] = bool(params["logprobs"])
     return params
+
+
+def _create_mock_response(use_chat: bool, has_logprobs: bool, n_choices: int = 1):
+    """Create mock OpenAI response for dryrun mode."""
+    choices = []
+    for _ in range(n_choices):
+        choice = SimpleNamespace()
+        if use_chat:
+            choice.message = SimpleNamespace(content="mock response", reasoning_content=None)
+        else:
+            choice.text = "mock response"
+        choice.finish_reason = "mock_complete"
+        choice.token_ids = [0]
+        if has_logprobs:
+            choice.logprobs = SimpleNamespace(content=[])
+        else:
+            choice.logprobs = None
+        choices.append(choice)
+    
+    response = SimpleNamespace(choices=choices)
+    return response
+
 
 class OpenAIAPIModel(Model):
     def __init__(
@@ -114,7 +173,22 @@ class OpenAIAPIModel(Model):
                 call_kwargs = {**base_params, "messages": p}
             else:
                 call_kwargs = {**base_params, "prompt": p}
-            tasks.append(self._create(**call_kwargs))
+            
+            # Dryrun mode: print curl command instead of making request
+            if _should_dryrun():
+                headers = {
+                    "Authorization": f"Bearer {self.openai_api.api_key}",
+                    "Content-Type": "application/json"
+                }
+                _print_curl_command(str(self.openai_api.base_url), headers, call_kwargs)
+                # Skip actual HTTP call - return mock response which will cause the benchmark to fail
+                mock_response = _create_mock_response(
+                    use_chat=self.use_chat,
+                    has_logprobs=params.get('logprobs', 0) > 0
+                )
+                tasks.append(asyncio.create_task(asyncio.sleep(0, result=mock_response)))
+            else:
+                tasks.append(self._create(**call_kwargs))
 
         responses = await asyncio.gather(*tasks)
         for r in responses:

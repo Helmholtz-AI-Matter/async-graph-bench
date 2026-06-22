@@ -49,6 +49,13 @@ The workflow demonstrates how you can:
 
 ## ▶️ How to Run
 
+0. **install additional dependencies**
+
+    ```bash
+    cd examples/resource_benchmark
+    uv pip install -r requirements.txt
+    ```
+
 1. **Set environment variables** for online endpoints in a `.env` file:
 
    ```bash
@@ -111,3 +118,23 @@ This allows you to **compare both performance and output characteristics** betwe
 When examining `benchmark.csv`, you may observe that using `vllm-offline-multi-instance` increases processing speed, but the improvement is not linear—for example, using 8 instances does not yield an 8× speedup. This behavior arises from the framework’s **asynchronous, concurrent execution model**. Once the combined throughput of all model instances exceeds the rate at which items can be processed, serialized, and passed between nodes on the main thread, additional instances no longer contribute to overall speed. Increasing the `batch_size` may help mitigate this bottleneck, but a **performance ceiling** will eventually be reached due to these synchronization and utility overheads.
 
 
+# For Debugging
+
+## Check Available Models
+
+```bash
+curl --header "Authorization: Bearer $OPENAI_API_KEY" https://api.helmholtz-blablador.fz-juelich.de/v1/models
+```
+
+## Perform simple query
+
+```bash
+curl https://api.helmholtz-blablador.fz-juelich.de/v1/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer ${OPENAI_API_KEY}" \
+-d '{
+     "model": "alias-fast",
+     "messages": [{"role": "user", "content": "Say this is a test!"}],
+     "logprobs": "true"
+   }'
+```

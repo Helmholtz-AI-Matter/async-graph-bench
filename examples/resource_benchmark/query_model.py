@@ -26,7 +26,7 @@ class QueryModel:
         self.max_tokens = max_tokens
         self.generation_params = GenerationParameters(
             max_tokens=self.max_tokens,
-            logprobs=1,
+            logprobs=True,
             temperature=1.0
         )
 

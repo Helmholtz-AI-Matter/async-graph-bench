@@ -1,7 +1,8 @@
 import argparse
 import os
+import sys
 
-import torch
+import GPUtil
 from dotenv import load_dotenv
 
 from async_graph_bench import BenchmarkManager, NodeConfig
@@ -26,7 +27,7 @@ print("\n\n")
 
 NodeConfig.base_config = {"queue_size": 100, "prop_name": "estimations"}
 
-if __name__ == "__main__":
+def main(argv):
     parser = argparse.ArgumentParser(
         description=(
             "Run a simple benchmark comparing LLM inference across different resource configurations. "
@@ -72,13 +73,18 @@ if __name__ == "__main__":
         default=2,
         help="Number of iterations computed per item (10 items total) during the benchmark (default: 2)."
     )
+    parser.add_argument(
+        "--dryrun",
+        action="store_true",
+        help="Print curl commands for HTTP requests without executing them. Only applies to OpenAI endpoint resources."
+    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     data_source = PromptDataSource()
 
+    # prepare list of models
     models = []
     resource_builder = None
-
     if args.resources.startswith(("endpoint", "both-endpoints")):
         ids = {"endpoint-1": [1], "endpoint-2": [2], "both-endpoints": [1, 2]}.get(args.resources, [1])
         endpoints = []
@@ -93,6 +99,8 @@ if __name__ == "__main__":
                 )
             )
         resource_builder = get_openai_api_builder(endpoints)
+        if args.dryrun:
+            os.environ["ASYNC_GRAPH_DRYRUN"] = "1"
 
     elif args.resources == "offline-vllm":
         models.append(args.model)
@@ -102,7 +110,8 @@ if __name__ == "__main__":
 
     else:  # offline vllm multi instance
         models.append(args.model)
-        amount_models = torch.cuda.device_count() / args.llm_args["tensor_parallel_size"]
+        device_count = len(GPUtil.getAvailable())
+        amount_models = device_count / args.llm_args["tensor_parallel_size"]
         models.append(f"x{amount_models}")
         resource_builder = get_vllm_multi_instance_builder(
             args.model, llm_args=args.llm_args, use_chat_template=True, reasoning_parser_mode=None
@@ -111,6 +120,7 @@ if __name__ == "__main__":
     result_path = f"data/{args.resources}-{'--'.join(models)}-{args.batch_size}"
     os.makedirs(result_path, exist_ok=True)
 
+    # prepare analysis
     available_stat_calculators = [
         NodeConfig(
             QueryModel(max_tokens=1024),
@@ -122,6 +132,7 @@ if __name__ == "__main__":
         ),
     ]
 
+    # setup BenchmarkManager to coordinate runs
     man = BenchmarkManager(
         iterations=args.iterations,  # Adjust as needed (e.g., 50 iterations * 10 prompts = 500 total queries per run)
         data_source=data_source,
@@ -131,10 +142,17 @@ if __name__ == "__main__":
         raise_exceptions=True,
     )
 
+    # viz exectuation graph
     if man.base_adg:
         visualize_graph(man.base_adg, format="svg")
 
+    # execute benchmark
     man.run_benchmark()
+
+    # gracefully exist here for a dryrun
+    if args.dryrun:
+        print("Dryrun done.")
+        return 0
 
     store = man.store_per_node["QueryModel"]
     token_lengths = [item["token_lengths"] for item in store.iter_items()]
@@ -142,6 +160,7 @@ if __name__ == "__main__":
     report = man.get_report()
     print(report.to_table())
 
+    # calculate extra metrics
     node_delta = report.nodes["QueryModel"].delta  # Total amount of queries in this run
     time_per_query = report.total_time / node_delta
 
@@ -155,3 +174,9 @@ if __name__ == "__main__":
             "Average Token Length": sum(token_lengths) / len(token_lengths),
         },
     )
+    return 0
+
+if __name__ == "__main__":
+    #TODO: how to catch the help statement and return 1
+    returnvalue = main(sys.argv[1:])
+    sys.exit(returnvalue)
