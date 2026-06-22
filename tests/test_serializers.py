@@ -79,6 +79,57 @@ class TestMessagePackSerializer:
         assert s.deserialize(s.serialize(original)) == original
 
 
+class TestZLibCompressionRatio:
+    def test_zlib_compresses_repetitive_data(self):
+        s = ZLibCompressionSerializer()
+        original = b"repetitive data for compression test " * 100
+        compressed = s.serialize(original)
+        assert len(compressed) < len(original)
+        assert s.deserialize(compressed) == original
+
+    def test_zlib_compression_level_9_smallest(self):
+        s_low = ZLibCompressionSerializer(level=1)
+        s_high = ZLibCompressionSerializer(level=9)
+        original = b"compress me please " * 200
+        low = s_low.serialize(original)
+        high = s_high.serialize(original)
+        assert len(high) <= len(low)
+        assert s_low.deserialize(low) == original
+        assert s_high.deserialize(high) == original
+
+    def test_zlib_no_compression_level_0(self):
+        s = ZLibCompressionSerializer(level=0)
+        original = b"no compression " * 100
+        compressed = s.serialize(original)
+        assert s.deserialize(compressed) == original
+
+
+class TestZstdCompressionRatio:
+    def test_zstd_compresses_repetitive_data(self):
+        s = ZstdCompressionSerializer()
+        original = b"repetitive data for zstd compression test " * 100
+        compressed = s.serialize(original)
+        assert len(compressed) < len(original)
+        assert s.deserialize(compressed) == original
+
+    def test_zstd_higher_level_better_compression(self):
+        s_low = ZstdCompressionSerializer(level=1)
+        s_high = ZstdCompressionSerializer(level=10)
+        original = b"compress me with zstd " * 200
+        low = s_low.serialize(original)
+        high = s_high.serialize(original)
+        assert len(high) <= len(low)
+        assert s_low.deserialize(low) == original
+        assert s_high.deserialize(high) == original
+
+    def test_zstd_large_data(self):
+        s = ZstdCompressionSerializer()
+        original = b"a" * 10000
+        compressed = s.serialize(original)
+        assert len(compressed) < len(original)
+        assert s.deserialize(compressed) == original
+
+
 class TestSerializerChains:
     def test_pickle_then_zlib(self):
         pickle_ser = PickleSerializer()
