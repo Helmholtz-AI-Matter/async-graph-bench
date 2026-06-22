@@ -8,35 +8,32 @@ from dotenv import load_dotenv
 from async_graph_bench import BenchmarkManager, NodeConfig
 from async_graph_bench.stores import JSONDataStore
 from async_graph_bench.utils.visualize_graph import visualize_graph
-from builders import (
-    Endpoint,
-    get_openai_api_builder,
-    get_vllm_builder,
-    get_vllm_multi_instance_builder,
-)
+from builders import Endpoint, get_openai_api_builder, get_vllm_builder, get_vllm_multi_instance_builder
 from prompt_datasource import PromptDataSource
 from query_model import QueryModel
-
-load_dotenv()
-
-print("===== ENV =====")
-for i in [1, 2]:
-    prefix = f"OPENAI_API_ENDPOINT_{i}"
-    base_url = os.environ.get(f"{prefix}_BASE_URL")
-    api_key = os.environ.get(f"{prefix}_API_KEY")
-    model = os.environ.get(f"{prefix}_MODEL")
-    print(f"{prefix}_BASE_URL =", base_url)
-    print(
-        f"{prefix}_API_KEY =",
-        (api_key[:3] + "*" * (len(api_key) - 3) if api_key else None),
-    )
-    print(f"{prefix}_MODEL =", model)
-print("\n\n")
+from pathlib import Path
+from typing import Tuple
 
 NodeConfig.base_config = {"queue_size": 100, "prop_name": "estimations"}
 
+def uncover_openai_credentials(dotenvpath: Path = Path(".env")) -> Tuple[str,str,str]:
+    load_dotenv(dotenvpath)
 
-def main(argv):
+    print("===== ENV =====")
+    for i in [1, 2]:
+        prefix = f"OPENAI_API_ENDPOINT_{i}"
+        base_url = os.environ.get(f"{prefix}_BASE_URL")
+        api_key = os.environ.get(f"{prefix}_API_KEY")
+        model = os.environ.get(f"{prefix}_MODEL")
+        print(f"{prefix}_BASE_URL =", base_url)
+        print(f"{prefix}_API_KEY =", (api_key[:3] + '*' * (len(api_key) - 3) if api_key else None))
+        print(f"{prefix}_MODEL =", model)
+        print("\n\n")
+
+    return base_url, api_key, model
+
+
+def main(argv) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Run a simple benchmark comparing LLM inference across different resource configurations. "
@@ -45,13 +42,7 @@ def main(argv):
     )
     parser.add_argument(
         "--resources",
-        choices=[
-            "endpoint-1",
-            "endpoint-2",
-            "both-endpoints",
-            "offline-vllm",
-            "offline-vllm-multi-instance",
-        ],
+        choices=['endpoint-1', 'endpoint-2', 'both-endpoints', 'offline-vllm', 'offline-vllm-multi-instance'],
         required=True,
         help=(
             "Select which model resources to use:\n"
@@ -59,12 +50,12 @@ def main(argv):
             "  both-endpoints             - Run the benchmark across both configured endpoints.\n"
             "  offline-vllm               - Use a single local vLLM instance.\n"
             "  offline-vllm-multi-instance - Launch multiple vLLM instances (based on available GPUs)."
-        ),
+        )
     )
     parser.add_argument(
         "--model",
         default="mistralai/Ministral-8B-Instruct-2410",
-        help="Model name or identifier to use for offline vLLM benchmarks (default: mistralai/Ministral-8B-Instruct-2410).",
+        help="Model name or identifier to use for offline vLLM benchmarks (default: mistralai/Ministral-8B-Instruct-2410)."
     )
     parser.add_argument(
         "--llm-args",
@@ -74,36 +65,43 @@ def main(argv):
             "Dictionary of additional keyword arguments for vLLM initialization, e.g. "
             '{"tokenizer_mode": "mistral", "tensor_parallel_size": 1}. '
             "Ignored for online endpoints."
-        ),
+        )
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=50,
-        help="Number of prompts processed per batch during the benchmark (default: 50).",
+        help="Number of prompts processed per batch during the benchmark (default: 50)."
+    )
+    parser.add_argument(
+        "--dotenvpath",
+        type=Path,
+        default=".env",
+        help="path to dotenv file to uncover the OPENAI_API_ENDPOINT and OPENAI_API_KEY"
     )
     parser.add_argument(
         "--iterations",
         type=int,
         default=2,
-        help="Number of iterations computed per item (10 items total) during the benchmark (default: 2).",
+        help="Number of iterations computed per item (10 items total) during the benchmark (default: 2)."
     )
     parser.add_argument(
         "--dryrun",
         action="store_true",
-        help="Print curl commands for HTTP requests without executing them. Only applies to OpenAI endpoint resources.",
+        help="Print curl commands for HTTP requests without executing them. Only applies to OpenAI endpoint resources."
     )
 
     args = parser.parse_args(argv)
     data_source = PromptDataSource()
 
+    # uncover openai API credentials
+    base_url, api_key, model = uncover_openai_credentials(args.dotenvpath)
+
     # prepare list of models
     models = []
     resource_builder = None
     if args.resources.startswith(("endpoint", "both-endpoints")):
-        ids = {"endpoint-1": [1], "endpoint-2": [2], "both-endpoints": [1, 2]}.get(
-            args.resources, [1]
-        )
+        ids = {"endpoint-1": [1], "endpoint-2": [2], "both-endpoints": [1, 2]}.get(args.resources, [1])
         endpoints = []
         for i in ids:
             model = os.environ.get(f"OPENAI_API_ENDPOINT_{i}_MODEL")
@@ -122,10 +120,7 @@ def main(argv):
     elif args.resources == "offline-vllm":
         models.append(args.model)
         resource_builder = get_vllm_builder(
-            args.model,
-            args.llm_args,
-            use_chat_template=True,
-            reasoning_parser_model=None,
+            args.model, args.llm_args, use_chat_template=True, reasoning_parser_model=None
         )
 
     else:  # offline vllm multi instance
@@ -134,10 +129,7 @@ def main(argv):
         amount_models = device_count / args.llm_args["tensor_parallel_size"]
         models.append(f"x{amount_models}")
         resource_builder = get_vllm_multi_instance_builder(
-            args.model,
-            llm_args=args.llm_args,
-            use_chat_template=True,
-            reasoning_parser_mode=None,
+            args.model, llm_args=args.llm_args, use_chat_template=True, reasoning_parser_mode=None
         )
 
     result_path = f"data/{args.resources}-{'--'.join(models)}-{args.batch_size}"
@@ -199,8 +191,7 @@ def main(argv):
     )
     return 0
 
-
 if __name__ == "__main__":
-    # TODO: how to catch the help statement and return 1
+    #TODO: how to catch the help statement and return 1
     returnvalue = main(sys.argv[1:])
     sys.exit(returnvalue)
