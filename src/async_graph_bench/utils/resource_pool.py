@@ -1,6 +1,9 @@
 import asyncio
 import inspect
+import logging
 from typing import Any, Iterable, List, Optional, Tuple, Union, Callable, Awaitable
+
+log = logging.getLogger(__name__)
 
 ResourceCloseFunc = Union[Callable[[], None], Callable[[], Awaitable[None]]]
 
@@ -104,18 +107,32 @@ class ResourcePool:
     # Release
     # ----------------------------
     async def release_resource(self, r: Any):
-        self._ensure_queue()       # safe even if already correct
+        """Return a single resource back to the pool.
 
+        If the internal queue is already full, the resource is silently dropped
+        because it is already inside the pool (e.g. the resource was previously
+        returned by a ``ResourceHandle`` and a subsequent call is a no-op).
+        This prevents blocking forever when the pool has reached its capacity.
+        """
+        self._ensure_queue()
         try:
             self._queue.put_nowait(r)
         except asyncio.QueueFull:
-            await self._queue.put(r)
+            log.debug("release_resource: queue full, resource %r already in pool", r)
 
     # ----------------------------
     # Misc
     # ----------------------------
     def available(self) -> int:
-        self._ensure_queue()
+        """Return the number of resources currently available in the pool.
+
+        Safe to call from a synchronous context (no running event loop).
+        When the lazy-internal queue has not yet been initialised, all
+        resources are assumed to be free.  After initialisation the live
+        ``asyncio.Queue`` size is used.
+        """
+        if self._queue is None:
+            return self._total
         return self._queue.qsize()
 
     def total(self) -> int:
