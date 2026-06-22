@@ -68,7 +68,9 @@ class MockResponseWrapper(ResponseWrapper):
     def get_tokens_alternatives(self) -> List[List[List[Tuple[str, float]]]]:
         return [[] for _ in self._messages]
 
-    def get_reasoning_tokens_alternatives(self) -> List[List[List[List[Tuple[str, float]]]]]:
+    def get_reasoning_tokens_alternatives(
+        self,
+    ) -> List[List[List[List[Tuple[str, float]]]]]:
         return [[] for _ in self._messages]
 
     def get_assistant_tokens_alternatives(self) -> List[List[List[Tuple[str, float]]]]:
@@ -84,7 +86,9 @@ class MockLLMModel(Model):
     def __init__(self, latency: float = 0.05):
         self._latency = latency
 
-    async def query(self, prompt, generation_params: GenerationParameters) -> MockResponseWrapper:
+    async def query(
+        self, prompt, generation_params: GenerationParameters
+    ) -> MockResponseWrapper:
         await asyncio.sleep(self._latency)
 
         messages = []
@@ -98,7 +102,9 @@ class MockLLMModel(Model):
                     content = item.get("content", "")
                     messages.append(QUESTIONS.get(content, DEFAULT_ANSWER))
                 elif isinstance(item, list):
-                    text_parts = [m.get("content", "") for m in item if isinstance(m, dict)]
+                    text_parts = [
+                        m.get("content", "") for m in item if isinstance(m, dict)
+                    ]
                     text = "\n".join(text_parts)
                     messages.append(QUESTIONS.get(text, DEFAULT_ANSWER))
                 else:

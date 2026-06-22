@@ -13,7 +13,6 @@ from typing import Any
 
 
 class ZstdCompressionSerializer:
-
     def __init__(self, level=3):
         self.level = level
 

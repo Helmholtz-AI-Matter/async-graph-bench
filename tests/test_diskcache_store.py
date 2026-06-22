@@ -1,5 +1,8 @@
 import pytest
-from async_graph_bench.stores.diskcache_store import DiskCacheStore, truncate_innermost_arrays
+from async_graph_bench.stores.diskcache_store import (
+    DiskCacheStore,
+    truncate_innermost_arrays,
+)
 import numpy as np
 
 
@@ -97,7 +100,9 @@ class TestDiskCacheStore:
 
 class TestTruncateInnermostArrays:
     def test_uniform_arrays_unchanged(self):
-        arr = np.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]], dtype=object)
+        arr = np.array(
+            [[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]], dtype=object
+        )
         result = truncate_innermost_arrays(arr)
         assert np.array_equal(result[0][0], np.array([1, 2, 3]))
 

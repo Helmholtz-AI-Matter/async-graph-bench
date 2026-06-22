@@ -156,7 +156,9 @@ class ResponseWrapper(ABC):
         pass
 
     @abstractmethod
-    def get_reasoning_tokens_alternatives(self) -> List[List[List[List[Tuple[str, float]]]]]:
+    def get_reasoning_tokens_alternatives(
+        self,
+    ) -> List[List[List[List[Tuple[str, float]]]]]:
         """
         Retrieve alternative tokens for reasoning segments.
 
@@ -192,8 +194,11 @@ class Model(ABC):
     """
 
     @abstractmethod
-    async def query(self, prompt: List[str] | str | List[dict] | List[List[dict]],
-                    generation_params: GenerationParameters) -> ResponseWrapper:
+    async def query(
+        self,
+        prompt: List[str] | str | List[dict] | List[List[dict]],
+        generation_params: GenerationParameters,
+    ) -> ResponseWrapper:
         """
         Abstract method. Generates a list of model answers using input texts batch.
 

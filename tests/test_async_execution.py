@@ -1,5 +1,3 @@
-import pytest
-import asyncio
 import time
 from typing import List, Dict, Any
 from async_graph_bench import (
@@ -10,51 +8,61 @@ from async_graph_bench import (
 )
 from async_graph_bench.utils import BuilderEnvironment
 from tests.fixtures import MockNode, SimpleMockDataSource
-from tests.mock_llm import MockLLMModel, MockResponseWrapper, GenerationParameters
 
 
 class SlowComputeNode:
     """Node that sleeps to simulate work, using a resource pool."""
+
     requires = ["value"]
     provides = ["computed"]
 
     def __init__(self, delay: float = 0.1):
         self.delay = delay
 
-    def __call__(self, item_stats: Dict[str, List[Any]], resource: str, **kwargs) -> Dict[str, List[Any]]:
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], resource: str, **kwargs
+    ) -> Dict[str, List[Any]]:
         time.sleep(self.delay)
         return {"computed": [v * 2 for v in item_stats["value"]]}
 
 
 class SlowValueDoubler:
     """Simple slow node adding value_doubled."""
+
     requires = ["value"]
     provides = ["value_doubled"]
 
-    def __call__(self, item_stats: Dict[str, List[Any]], resource: str, **kwargs) -> Dict[str, List[Any]]:
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], resource: str, **kwargs
+    ) -> Dict[str, List[Any]]:
         time.sleep(0.1)
         return {"value_doubled": [v * 2 for v in item_stats["value"]]}
 
 
 class SlowTextAnalyzer:
     """Simple slow node adding text_len."""
+
     requires = ["text"]
     provides = ["text_len"]
 
-    def __call__(self, item_stats: Dict[str, List[Any]], resource: str, **kwargs) -> Dict[str, List[Any]]:
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], resource: str, **kwargs
+    ) -> Dict[str, List[Any]]:
         time.sleep(0.1)
         return {"text_len": [len(t) for t in item_stats["text"]]}
 
 
 class SlowConsumerNode:
     """Consumer that requires both outputs."""
+
     requires = ["value_doubled", "text_len"]
 
-    def __call__(self, item_stats: Dict[str, List[Any]], resource: str, **kwargs) -> List[Any]:
-        return [v * lt for v, lt in zip(
-            item_stats["value_doubled"],
-            item_stats["text_len"]
-        )]
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], resource: str, **kwargs
+    ) -> List[Any]:
+        return [
+            v * lt for v, lt in zip(item_stats["value_doubled"], item_stats["text_len"])
+        ]
 
 
 def build_resource_pool(env: BuilderEnvironment, pool_size: int = 2) -> ResourcePool:
@@ -113,8 +121,13 @@ class TestConcurrentExecution:
             requires = ["value"]
             provides = ["multi_out"]
 
-            def __call__(self, item_stats: Dict[str, List[Any]],
-                         resource_a: str, resource_b: str, **kwargs) -> Dict[str, List[Any]]:
+            def __call__(
+                self,
+                item_stats: Dict[str, List[Any]],
+                resource_a: str,
+                resource_b: str,
+                **kwargs,
+            ) -> Dict[str, List[Any]]:
                 return {"multi_out": [v * 3 for v in item_stats["value"]]}
 
         multi_node = NodeConfig(

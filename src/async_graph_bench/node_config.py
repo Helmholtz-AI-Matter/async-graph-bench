@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import logging
-from typing import Callable, Union
-from typing import List, Optional
+from typing import Awaitable, Callable, List, Optional, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from .utils import BuilderEnvironment, ResourcePool
 
 from .node import Node
 from .sampling_config import SamplingConfig
@@ -9,8 +13,12 @@ from .stores import DataStore
 log = logging.getLogger(__name__)
 
 ResourceBuilder = Callable[
-    ["BuilderEnvironment"],
-    "Union[ResourcePool, list[ResourcePool], Awaitable[Union[ResourcePool, list[ResourcePool]]]]"
+    "BuilderEnvironment",
+    Union[
+        "ResourcePool",
+        list["ResourcePool"],
+        Awaitable[Union["ResourcePool", list["ResourcePool"]]],
+    ],
 ]
 
 
@@ -34,18 +42,18 @@ class NodeConfig:
     base_config: Optional[dict] = None  # Class-level default config
 
     def __init__(
-            self,
-            node: Node,
-            id: Optional[str] = None,
-            data_store: Optional[Callable[..., DataStore]] = None,
-            batch_size: Optional[int] = None,
-            resource_builder: Optional[ResourceBuilder] = None,
-            max_tasks: Optional[int] = None,
-            queue_size: Optional[int] = None,
-            greedy: bool = False,
-            sampling_config: SamplingConfig = None,
-            step: int = 1,
-            always_recompute: bool = False
+        self,
+        node: Node,
+        id: Optional[str] = None,
+        data_store: Optional[Callable[..., DataStore]] = None,
+        batch_size: Optional[int] = None,
+        resource_builder: Optional[ResourceBuilder] = None,
+        max_tasks: Optional[int] = None,
+        queue_size: Optional[int] = None,
+        greedy: bool = False,
+        sampling_config: SamplingConfig = None,
+        step: int = 1,
+        always_recompute: bool = False,
     ):
         base = NodeConfig.base_config or {}
 
@@ -62,11 +70,21 @@ class NodeConfig:
         self.sampling_config = sampling_config
 
         if self.is_sampling():
-            assert sampling_config is not None, "If Node uses sampling, it is necessary to provide sampling configuration."
-            assert getattr(node, "spread",
-                           False) == False or sampling_config.all_variations is None, "Cannot define `all_variations` for spread sampling nodes"
+            assert sampling_config is not None, (
+                "If Node uses sampling, it is necessary to provide sampling configuration."
+            )
+            assert (
+                not getattr(node, "spread", False)
+                or sampling_config.all_variations is None
+            ), "Cannot define `all_variations` for spread sampling nodes"
             spread = getattr(node, "spread", False)
-            self.sampling_mode = "spread" if spread else "extend" if sampling_config.all_variations else "first"
+            self.sampling_mode = (
+                "spread"
+                if spread
+                else "extend"
+                if sampling_config.all_variations
+                else "first"
+            )
 
         assert not self.greedy or self.data_store, (
             f"Node {str(self.node)} is greedy but does not provide a store to cache results!"

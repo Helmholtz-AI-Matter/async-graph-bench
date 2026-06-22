@@ -8,7 +8,13 @@ from .store import DataStore
 
 
 class InMemoryStore(DataStore):
-    def __init__(self, directory: str, filename: str, flush_every: Optional[int] = None, create_okay: bool = False):
+    def __init__(
+        self,
+        directory: str,
+        filename: str,
+        flush_every: Optional[int] = None,
+        create_okay: bool = False,
+    ):
         self.directory = Path(directory)
         self.filename = filename
         self.flush_every = flush_every
@@ -19,7 +25,9 @@ class InMemoryStore(DataStore):
 
     def save(self, item: dict):
         for i, saved_item in enumerate(self.data):
-            if saved_item["id"] == item["id"] and saved_item.get("iter", 0) == item.get("iter", 0):
+            if saved_item["id"] == item["id"] and saved_item.get("iter", 0) == item.get(
+                "iter", 0
+            ):
                 self.data[i] = item
                 return
         self.data.append(item)
@@ -38,7 +46,10 @@ class InMemoryStore(DataStore):
         return False
 
     def contains_key(self, id: Any, iteration=0) -> bool:
-        return any(entry["id"] == id and entry.get("iter", 0) == iteration for entry in self.data)
+        return any(
+            entry["id"] == id and entry.get("iter", 0) == iteration
+            for entry in self.data
+        )
 
     def load(self, id: Any, iteration=0) -> Optional[dict]:
         for entry in self.data:

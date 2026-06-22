@@ -1,4 +1,3 @@
-import inspect
 import logging
 from typing import AsyncIterator, Callable, Dict, Any, Iterable
 from collections.abc import AsyncIterable
@@ -11,6 +10,7 @@ async def _ensure_async(source):
     if isinstance(source, AsyncIterable):
         return source
     elif isinstance(source, Iterable):
+
         async def async_wrap():
             for item in source:
                 yield item
@@ -34,10 +34,10 @@ class DataSourceExecutionWrapper:
     """
 
     def __init__(
-            self,
-            data_source: Callable[[], AsyncIterator[Dict[str, Any]]],
-            iterations: int = 1,
-            iterations_first: bool = True
+        self,
+        data_source: Callable[[], AsyncIterator[Dict[str, Any]]],
+        iterations: int = 1,
+        iterations_first: bool = True,
     ):
         self.data_source_gen = data_source
         self.iterations = iterations
@@ -56,7 +56,7 @@ class DataSourceExecutionWrapper:
         if self.iterations == 1:
             source_iter = await _ensure_async(self.data_source_gen())
             async for item in source_iter:
-                item['_idx'] = counter
+                item["_idx"] = counter
                 counter += 1
                 yield item
 
@@ -65,8 +65,8 @@ class DataSourceExecutionWrapper:
             async for item in source_iter:
                 for i in range(self.iterations):
                     item_i = item.copy()
-                    item_i['_idx'] = counter
-                    item_i['iter'] = i
+                    item_i["_idx"] = counter
+                    item_i["iter"] = i
                     counter += 1
                     yield item_i
 
@@ -77,8 +77,8 @@ class DataSourceExecutionWrapper:
                 source_iter = await _ensure_async(self.data_source_gen())
                 async for item in source_iter:
                     item_i = item.copy()
-                    item_i['_idx'] = counter
-                    item_i['iter'] = i
+                    item_i["_idx"] = counter
+                    item_i["iter"] = i
                     counter += 1
                     yield item_i
 

@@ -19,7 +19,9 @@ def multi_incoming_node(generator, incoming_nodes_count):
     lock = Lock()  # Ensures safe access to the buffer across multiple tasks
 
     async def wrapped(item):
-        combined_id = get_combined_id(item) if not isinstance(item, EndOfData) else EndOfData
+        combined_id = (
+            get_combined_id(item) if not isinstance(item, EndOfData) else EndOfData
+        )
 
         should_process = False
         async with lock:

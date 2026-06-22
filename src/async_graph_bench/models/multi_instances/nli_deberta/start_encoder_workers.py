@@ -1,16 +1,16 @@
+import asyncio
 import logging
 import os
 import signal
-
-log = logging.getLogger(__name__)
-
-import asyncio
-import logging
 from typing import Any, Dict, List, Optional
+
 import aioprocessing
 import torch
+
 from .encoder_worker import _encoder_worker_main
 from ..worker_client import WorkerClient
+
+log = logging.getLogger(__name__)
 
 
 async def wait_with_timeout(init_queues, timeout: float):
@@ -95,13 +95,15 @@ async def start_encoder_workers(
                     model_kwargs or {},
                     [gpu_id],
                     logging.INFO,
-                    cache_path
+                    cache_path,
                 ),
             )
             processes.append(proc)
             proc.start()
 
-            wc = WorkerClient(request_q, response_q, proc, shutdown, _id=f"{gpu_id}-{j}")
+            wc = WorkerClient(
+                request_q, response_q, proc, shutdown, _id=f"{gpu_id}-{j}"
+            )
             workers.append(wc)
 
     # Wait for init results

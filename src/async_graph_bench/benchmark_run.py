@@ -5,38 +5,55 @@ import logging
 import sys
 import time
 from functools import reduce
-from typing import Dict, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set
 
+from bitarray import bitarray
 from async_graph_data_flow import AsyncExecutor, AsyncGraph
 from tqdm import tqdm
 
 from .acyclic_directed_graph import AcyclicDirectedGraph
 from .data_source import DataSource
-from .execution_nodes import data_cache, batching, skip_indices, skip_indices_data_source, \
-    multi_incoming_node, with_resources, progress_wrapper, NodeExecutionWrapper, sampling, coordinated_end_of_data
+from .execution_nodes import (
+    data_cache,
+    batching,
+    skip_indices,
+    skip_indices_data_source,
+    multi_incoming_node,
+    with_resources,
+    progress_wrapper,
+    NodeExecutionWrapper,
+    sampling,
+    coordinated_end_of_data,
+)
 from .execution_nodes.data_source_execution_wrapper import DataSourceExecutionWrapper
 from .manager import ExceptionInfo
+from .stores.store import DataStore
 from .utils.builder_enviroment_stat_calculator import BuilderEnvironment
+from .utils.helpers import (
+    adjust_string_length,
+    flatten_recursive,
+    get_resolved_keys,
+    is_fully_resolved,
+    resolved_ids_to_bitarray,
+)
 
 log = logging.getLogger(__name__)
-
-from .utils.helpers import *
 
 
 class BenchmarkRun:
     def __init__(
-            self,
-            adg: AcyclicDirectedGraph,
-            data_source: DataSource,
-            iterations: int,
-            iterations_first: bool,
-            store_per_node: Dict[str, DataStore],
-            data_storage_path: str,
-            show_progress_bars: bool,
-            halt_on_exception: bool,
-            data_source_item_index: Dict[tuple, int],
-            step: int = 1,
-            raise_exceptions=False
+        self,
+        adg: AcyclicDirectedGraph,
+        data_source: DataSource,
+        iterations: int,
+        iterations_first: bool,
+        store_per_node: Dict[str, DataStore],
+        data_storage_path: str,
+        show_progress_bars: bool,
+        halt_on_exception: bool,
+        data_source_item_index: Dict[tuple, int],
+        step: int = 1,
+        raise_exceptions=False,
     ):
         self.exceptions: List[ExceptionInfo] = []
         self.start_time = None
@@ -67,7 +84,9 @@ class BenchmarkRun:
     def get_store_and_resolved_ids(self, node_config):
         store = self.store_per_node.get(node_config.id)
         if store is None:
-            store = node_config.data_store(self.data_storage_path, node_config.id, create_okay=True)
+            store = node_config.data_store(
+                self.data_storage_path, node_config.id, create_okay=True
+            )
             if node_config.always_recompute:
                 store.clear()
             self.store_per_node[node_config.id] = store
@@ -92,16 +111,20 @@ class BenchmarkRun:
             if ba.all():
                 self.adg.turn_consumer_non_greedy(greedy_node_config)
                 log.warning(
-                    f"Node {greedy_node_config.id:<25} has fully resolved ({initial:>6} / {total:<7}) - setting it to non greedy")
+                    f"Node {greedy_node_config.id:<25} has fully resolved ({initial:>6} / {total:<7}) - setting it to non greedy"
+                )
             else:
                 self.consumer_skip_indices[greedy_node_config.id] = ba
                 log.info(
-                    f"Node {greedy_node_config.id:<25} has resolved {initial:>6} / {len(self.data_source_item_index):<7}")
+                    f"Node {greedy_node_config.id:<25} has resolved {initial:>6} / {len(self.data_source_item_index):<7}"
+                )
 
         # If there are no greedy nodes reachable in the adg, nothing to do for this run
         if not self.adg.greedy_nodes_configs:
             self.state = "skipped"
-            log.warning("No greedy nodes defined or reachable for this run, or all greedy nodes are already resolved.")
+            log.warning(
+                "No greedy nodes defined or reachable for this run, or all greedy nodes are already resolved."
+            )
             return
 
         # combine skip tables (items already computed by all consumers)
@@ -114,18 +137,24 @@ class BenchmarkRun:
 
         removed = self.adg.treeshake()
         if removed:
-            log.info("Removed nodes during treeshaking: %s", ", ".join(r.id for r in removed))
+            log.info(
+                "Removed nodes during treeshaking: %s", ", ".join(r.id for r in removed)
+            )
 
     def _build_execution_graph_data_source(self, execution_graph: AsyncGraph):
         generator = DataSourceExecutionWrapper(
             data_source=self.adg.data_source.iter_items,
             iterations=self.iterations,
-            iterations_first=self.iterations_first
+            iterations_first=self.iterations_first,
         ).execute
 
         if self.data_source_idx_skip_table.count(1):
-            log.info(f"DataSource will skip {self.data_source_idx_skip_table.count(1)} items")
-            generator = skip_indices_data_source(generator, self.data_source_idx_skip_table)
+            log.info(
+                f"DataSource will skip {self.data_source_idx_skip_table.count(1)} items"
+            )
+            generator = skip_indices_data_source(
+                generator, self.data_source_idx_skip_table
+            )
 
         execution_graph.add_node(generator, name=self.adg.data_source.id)
 
@@ -135,11 +164,10 @@ class BenchmarkRun:
         all_node_configs, _ = self.adg.get_nodes_and_edges_in_topological_order()
 
         for node_config in all_node_configs:
-
             args = {
                 "name": node_config.id,
                 "unpack_input": False,
-                "max_tasks": node_config.max_tasks or 1
+                "max_tasks": node_config.max_tasks or 1,
             }
             if node_config.queue_size:
                 args["queue_size"] = node_config.queue_size
@@ -150,22 +178,32 @@ class BenchmarkRun:
             fully_resolved = False
             if node_config.data_store:
                 store, resolved_ids = self.get_store_and_resolved_ids(node_config)
-                fully_resolved = len(resolved_ids) >= len(self.data_source_item_index) and \
-                                 is_fully_resolved(self.data_source_item_index, resolved_ids)
+                fully_resolved = len(resolved_ids) >= len(
+                    self.data_source_item_index
+                ) and is_fully_resolved(self.data_source_item_index, resolved_ids)
 
             if node_config.resource_builder and not fully_resolved:
                 log.info("Building Resources for Node %s", node_config.id)
                 if inspect.iscoroutinefunction(node_config.resource_builder):
-                    resources = asyncio.run(node_config.resource_builder(env=self.resource_builder_env))
+                    resources = asyncio.run(
+                        node_config.resource_builder(env=self.resource_builder_env)
+                    )
                 else:
-                    resources = node_config.resource_builder(env=self.resource_builder_env)
+                    resources = node_config.resource_builder(
+                        env=self.resource_builder_env
+                    )
                 if not isinstance(resources, List):
                     resources = [resources]
                 log.info("Successfully built resources")
                 # resources = node_config.resource_builder(env=self.resource_builder_env)
                 args["max_tasks"] *= min([pool.total() for pool in resources])
                 self.resources.update(
-                    set(flatten_recursive(resources) if isinstance(resources, Iterable) else [resources]))
+                    set(
+                        flatten_recursive(resources)
+                        if isinstance(resources, Iterable)
+                        else [resources]
+                    )
+                )
                 generator = with_resources(generator, resources)
 
             if args["max_tasks"] > 1:
@@ -178,18 +216,24 @@ class BenchmarkRun:
                 generator = sampling(
                     generator=generator,
                     dependencies=self.adg.sampling[node_config],
-                    sample_size=node_config.sampling_config.sampling_size or self.iterations,
+                    sample_size=node_config.sampling_config.sampling_size
+                    or self.iterations,
                     total_iterations=self.iterations,
                     mode=node_config.sampling_mode,
-                    spread_keys=None if node_config.sampling_mode != "spread" else "all" if not hasattr(
-                        node_config.node, "provides") else node_config.node.provides
+                    spread_keys=None
+                    if node_config.sampling_mode != "spread"
+                    else "all"
+                    if not hasattr(node_config.node, "provides")
+                    else node_config.node.provides,
                 )
 
             if store is not None:
                 generator = data_cache(
                     generator,
                     store=store,
-                    properties=node_config.node.provides if hasattr(node_config.node, "provides") else "all"
+                    properties=node_config.node.provides
+                    if hasattr(node_config.node, "provides")
+                    else "all",
                 )
 
             skip_table = None
@@ -203,7 +247,11 @@ class BenchmarkRun:
                     for consumer_config in consumers_by_calculator[node_config]
                     if consumer_config.id in self.consumer_skip_indices
                 ]
-                skip_table = reduce(lambda x, y: x & y, consumer_skip_indices) if consumer_skip_indices else None
+                skip_table = (
+                    reduce(lambda x, y: x & y, consumer_skip_indices)
+                    if consumer_skip_indices
+                    else None
+                )
                 initial = skip_table.count(1) if skip_table else 0
 
             total = len(self.adg.data_source) * (
@@ -222,7 +270,7 @@ class BenchmarkRun:
                     file=sys.stdout,
                     position=len(self._progress_bars),
                     # when using batching, a lot of items will come in less than 1/10 of a second - this prohibits the bar from displaying the updates individually
-                    mininterval=1.0
+                    mininterval=1.0,
                 )
                 bar.disable = True
                 self._progress_bars.append(bar)
@@ -233,7 +281,9 @@ class BenchmarkRun:
                     generator = skip_indices(generator, skip_table)
 
             if self.adg.count_parents(node_config) > 1:
-                generator = multi_incoming_node(generator, self.adg.count_parents(node_config))
+                generator = multi_incoming_node(
+                    generator, self.adg.count_parents(node_config)
+                )
 
             execution_graph.add_node(generator, **args)
 
@@ -243,7 +293,7 @@ class BenchmarkRun:
         self._build_execution_graph_nodes(execution_graph)
 
         _, edges = self.adg.get_nodes_and_edges_in_topological_order()
-        for (producer_config, consumer_config) in edges:
+        for producer_config, consumer_config in edges:
             execution_graph.add_edge(producer_config.id, consumer_config.id)
 
         return execution_graph
@@ -254,7 +304,8 @@ class BenchmarkRun:
         """
         if self.state == "skipped":
             log.warning(
-                "Skipping execution: nothing to calculate for this step - graph does not contain any greedy nodes.")
+                "Skipping execution: nothing to calculate for this step - graph does not contain any greedy nodes."
+            )
             return
 
         log.info(f"Building execution graph for step {self.step}")

@@ -12,12 +12,12 @@ log = logging.getLogger(__name__)
 
 class WorkerClient:
     def __init__(
-            self,
-            request_q: aioprocessing.AioQueue,
-            result_q: aioprocessing.AioQueue,
-            proc: aioprocessing.AioProcess,
-            shutdown,
-            _id=None
+        self,
+        request_q: aioprocessing.AioQueue,
+        result_q: aioprocessing.AioQueue,
+        proc: aioprocessing.AioProcess,
+        shutdown,
+        _id=None,
     ):
         """
         - request_q/result_q: AioQueues for messages to/from worker
@@ -41,12 +41,9 @@ class WorkerClient:
 
         req_id = uuid.uuid4().hex
         # log.info("WorkerClient %s sending request %s", self._id, req_id)
-        await self.request_q.coro_put({
-            "id": req_id,
-            "method": method,
-            "args": args,
-            "kwargs": kwargs
-        })
+        await self.request_q.coro_put(
+            {"id": req_id, "method": method, "args": args, "kwargs": kwargs}
+        )
 
         try:
             res = await self.result_q.coro_get()
@@ -58,17 +55,24 @@ class WorkerClient:
                 self.shutdown()
             except Exception:
                 pass
-            raise RuntimeError(f"Worker Client {self._id} failed to read from result queue: {e}") from e
+            raise RuntimeError(
+                f"Worker Client {self._id} failed to read from result queue: {e}"
+            ) from e
 
         if res is None:
             # worker signalled termination
             self._closed = True
-            log.error("Worker Client %s got sentinel None from worker (worker shutting down)", self._id)
+            log.error(
+                "Worker Client %s got sentinel None from worker (worker shutting down)",
+                self._id,
+            )
             try:
                 self.shutdown()
             except Exception:
                 pass
-            raise RuntimeError(f"Worker Client {self._id} got interrupted (worker shutting down)")
+            raise RuntimeError(
+                f"Worker Client {self._id} got interrupted (worker shutting down)"
+            )
 
         # log.debug("Worker Client %s got response=%s|%s", self._id, str(res.get("id")), str(res.get("status")))
 

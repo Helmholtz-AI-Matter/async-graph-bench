@@ -1,8 +1,8 @@
 import gc
 import logging
 import os
-from typing import Callable, Union
-from typing import Dict, Optional
+from typing import Callable, Dict, List, Literal, Optional, Tuple
+
 
 from async_graph_bench.utils import ExceptionInfo
 from .acyclic_directed_graph import AcyclicDirectedGraph
@@ -11,12 +11,20 @@ from .data_source import DataSource
 from .node_config import NodeConfig
 from .report import BenchmarkReport
 from .stores import CSVDataStore
-from .utils.helpers import *
+from .stores.store import DataStore
+from .utils.helpers import (
+    build_combined_keys,
+    check_unique_strings,
+    clear_metadata,
+    get_duplicates,
+    get_metadata,
+    update_metadata,
+)
 
 log = logging.getLogger(__name__)
 
-NodeState = Union["pruned", "unreachable", "active"]
-BenchmarkState = Union["pending", "finished", "crashed", "skipped"]
+NodeState = Literal["pruned", "unreachable", "active"]
+BenchmarkState = Literal["pending", "finished", "crashed", "skipped"]
 
 
 class BenchmarkManager:
@@ -34,16 +42,16 @@ class BenchmarkManager:
     """
 
     def __init__(
-            self,
-            data_source: DataSource,
-            nodes: List[NodeConfig | Callable],
-            data_storage_path: str,
-            consumer_nodes: Optional[List[NodeConfig | Callable]] = None,
-            show_progress_bars: bool = True,
-            halt_on_exception: bool = True,
-            raise_exceptions: bool = True,
-            iterations: int = 1,
-            iterations_first: Optional[bool] = None,
+        self,
+        data_source: DataSource,
+        nodes: List[NodeConfig | Callable],
+        data_storage_path: str,
+        consumer_nodes: Optional[List[NodeConfig | Callable]] = None,
+        show_progress_bars: bool = True,
+        halt_on_exception: bool = True,
+        raise_exceptions: bool = True,
+        iterations: int = 1,
+        iterations_first: Optional[bool] = None,
     ):
         """Initializes a BenchmarkManager instance.
 
@@ -75,7 +83,9 @@ class BenchmarkManager:
 
         if not os.path.exists(self.data_storage_path):
             os.makedirs(self.data_storage_path)
-            log.warning(f"Data Storage directory ({self.data_storage_path}) does not exist, creating it...")
+            log.warning(
+                f"Data Storage directory ({self.data_storage_path}) does not exist, creating it..."
+            )
 
         def ensure_consumer_config(c):
             if not isinstance(c, NodeConfig):
@@ -84,48 +94,66 @@ class BenchmarkManager:
             c.data_store = c.data_store or CSVDataStore
             return c
 
-        consumer_nodes = [ensure_consumer_config(c) for c in consumer_nodes] if consumer_nodes else []
+        consumer_nodes = (
+            [ensure_consumer_config(c) for c in consumer_nodes]
+            if consumer_nodes
+            else []
+        )
         calculators = [
-            calc if isinstance(calc, NodeConfig) else NodeConfig(calc)
-            for calc in nodes
+            calc if isinstance(calc, NodeConfig) else NodeConfig(calc) for calc in nodes
         ]
 
         self.node_configs = consumer_nodes + calculators
 
         # check duplicate ids
         check_unique_strings([config.id for config in self.node_configs])
-        assert all(self.iterations % node.sampling_config.sampling_size == 0 for node in self.node_configs if
-                   node.sampling_config is not None)
-        for sampling_node in [node for node in self.node_configs if node.sampling_config is not None]:
+        assert all(
+            self.iterations % node.sampling_config.sampling_size == 0
+            for node in self.node_configs
+            if node.sampling_config is not None
+        )
+        for sampling_node in [
+            node for node in self.node_configs if node.sampling_config is not None
+        ]:
             if sampling_node.always_recompute:
                 clear_metadata(self.data_storage_path, sampling_node.id)
             metadata = get_metadata(self.data_storage_path, sampling_node.id)
             provided = {
                 "sampling_size": sampling_node.sampling_config.sampling_size,
                 "all_variations": sampling_node.sampling_config.all_variations,
-                "sampling_mode": sampling_node.sampling_mode
+                "sampling_mode": sampling_node.sampling_mode,
             }
             for key in provided.keys():
                 if key in metadata and metadata[key] != provided[key]:
                     raise Exception(
-                        f"Mismatch in provided sampling config and sampling config stored in metadata file {self.data_storage_path}/{sampling_node.id}.metadata.json for node {sampling_node.id}. Please adjust the provided sampling config or delete the metadata and possible previously stored data in the corresponding datastore to prevent id mismatches. Key: {key}, Metadata: {metadata[key]}, provided SamplingConfig: {provided[key]}")
-            update_metadata(self.data_storage_path, sampling_node.id, {
-                "sampling_size": sampling_node.sampling_config.sampling_size,
-                "all_variations": sampling_node.sampling_config.all_variations,
-                "sampling_mode": sampling_node.sampling_mode
-            })
+                        f"Mismatch in provided sampling config and sampling config stored in metadata file {self.data_storage_path}/{sampling_node.id}.metadata.json for node {sampling_node.id}. Please adjust the provided sampling config or delete the metadata and possible previously stored data in the corresponding datastore to prevent id mismatches. Key: {key}, Metadata: {metadata[key]}, provided SamplingConfig: {provided[key]}"
+                    )
+            update_metadata(
+                self.data_storage_path,
+                sampling_node.id,
+                {
+                    "sampling_size": sampling_node.sampling_config.sampling_size,
+                    "all_variations": sampling_node.sampling_config.all_variations,
+                    "sampling_mode": sampling_node.sampling_mode,
+                },
+            )
 
         # build base ADG (this is the graph template we will copy for each run)
         self.base_adg = AcyclicDirectedGraph(self.data_source, self.node_configs)
         self.base_adg.build_graph()
         removed = self.base_adg.treeshake()
         if removed:
-            log.info("Removed nodes during initial treeshaking: %s", ", ".join(r.id for r in removed))
+            log.info(
+                "Removed nodes during initial treeshaking: %s",
+                ", ".join(r.id for r in removed),
+            )
         self.base_adg.remove_transient_edges()
 
         # create stores for greedy nodes and clear ones flagged as always_recompute once up-front
         for greedy_node_config in list(self.base_adg.greedy_nodes_configs):
-            store = greedy_node_config.data_store(self.data_storage_path, greedy_node_config.id, create_okay=True)
+            store = greedy_node_config.data_store(
+                self.data_storage_path, greedy_node_config.id, create_okay=True
+            )
             if greedy_node_config.always_recompute:
                 store.clear()
             self.store_per_node[greedy_node_config.id] = store
@@ -134,30 +162,40 @@ class BenchmarkManager:
         # we will run steps 0..max_step inclusive.
         steps = set(cfg.step for cfg in self.node_configs)
         max_step = max(steps) if steps else 1
-        missing = [s for s in range(2, max_step + 1) if
-                   not any(getattr(cfg, "step", 1) == s for cfg in self.node_configs)]
+        missing = [
+            s
+            for s in range(2, max_step + 1)
+            if not any(getattr(cfg, "step", 1) == s for cfg in self.node_configs)
+        ]
         if missing:
-            raise ValueError(f"Step configuration is not continuous — missing steps: {missing}")
+            raise ValueError(
+                f"Step configuration is not continuous — missing steps: {missing}"
+            )
         self.total_steps = max_step
 
         if self.iterations_first is None:
-            self.iterations_first = any(node.is_sampling() for node in
-                                        self.base_adg.optional_nodes_configs | self.base_adg.greedy_nodes_configs)
+            self.iterations_first = any(
+                node.is_sampling()
+                for node in self.base_adg.optional_nodes_configs
+                | self.base_adg.greedy_nodes_configs
+            )
 
         duplicates = get_duplicates(self.data_source.iter_ids())
         if len(duplicates):
-            raise AssertionError(f"Duplicate IDs in provided DataSource. Duplicate IDs found: {duplicates}")
+            raise AssertionError(
+                f"Duplicate IDs in provided DataSource. Duplicate IDs found: {duplicates}"
+            )
 
         # Build combined ids for this run
         all_ids = build_combined_keys(
             self.data_source.iter_ids(),
             iterations=self.iterations,
-            iterations_first=self.iterations_first
+            iterations_first=self.iterations_first,
         )
-        self.data_source_item_index: Dict[Tuple, int] = {  # TODO a hashlist may be more appropriate/ efficient
-            item_id: index
-            for index, item_id
-            in enumerate(all_ids)
+        self.data_source_item_index: Dict[
+            Tuple, int
+        ] = {  # TODO a hashlist may be more appropriate/ efficient
+            item_id: index for index, item_id in enumerate(all_ids)
         }
 
     def _prepare_adg_for_step(self, step: int) -> AcyclicDirectedGraph:
@@ -172,7 +210,7 @@ class BenchmarkManager:
         """
         adg_copy = self.base_adg.copy()
         # Deactivate nodes that should not be active in this step
-        for cfg in (adg_copy.optional_nodes_configs | adg_copy.greedy_nodes_configs):
+        for cfg in adg_copy.optional_nodes_configs | adg_copy.greedy_nodes_configs:
             if cfg.step > step:
                 adg_copy.remove_node(cfg)
         return adg_copy
@@ -189,7 +227,6 @@ class BenchmarkManager:
             It must NOT be invoked from within an already running asyncio event loop.
         """
         assert len(self.runs) == 0, "Cannot rerun same benchmark instance!"
-        last_stores = self.store_per_node
 
         for step in range(1, self.total_steps + 1):
             log.info(f"Starting benchmark step {step}/{self.total_steps}")
@@ -207,7 +244,7 @@ class BenchmarkManager:
                 data_storage_path=self.data_storage_path,
                 show_progress_bars=self.show_progress_bars,
                 halt_on_exception=self.halt_on_exception,
-                raise_exceptions=self.raise_exceptions
+                raise_exceptions=self.raise_exceptions,
             )
             run.init_graph()
             self.runs.append(run)
@@ -220,19 +257,25 @@ class BenchmarkManager:
                 run.run()
                 for exception in run.exceptions:
                     self.exceptions.append(
-                        ExceptionInfo(exception.exception, exception.originator, step=step)
+                        ExceptionInfo(
+                            exception.exception, exception.originator, step=step
+                        )
                     )
                 if self.exceptions:
-                    print(f"Exception during benchmark run at step {step}; aborting subsequent steps.")
+                    print(
+                        f"Exception during benchmark run at step {step}; aborting subsequent steps."
+                    )
                     if self.raise_exceptions:
                         raise ExceptionGroup(
                             "Exception during benchmark run at step {step}; aborting subsequent steps.",
-                            [exc.exception for exc in self.exceptions]
+                            [exc.exception for exc in self.exceptions],
                         )
                     else:
                         break  # don't execute subsequent steps if this one resulted in an error
                 else:
-                    print(f"Finished benchmark run at step {step} - run state: {run.state}")
+                    print(
+                        f"Finished benchmark run at step {step} - run state: {run.state}"
+                    )
             finally:
                 gc.collect()  # force garbage collection
 
@@ -246,7 +289,13 @@ class BenchmarkManager:
         Returns:
             str: One of "active", "pruned", or "unreachable".
         """
-        return "pruned" if node in adg.pruned_nodes else "unreachable" if node in adg.unreachable_nodes else "active"
+        return (
+            "pruned"
+            if node in adg.pruned_nodes
+            else "unreachable"
+            if node in adg.unreachable_nodes
+            else "active"
+        )
 
     def get_state(self) -> BenchmarkState:
         """Returns the current overall benchmark state.
@@ -266,7 +315,8 @@ class BenchmarkManager:
             if all(run.state == "skipped" for run in self.runs):
                 return "skipped"
             if all(run.state in ["finished", "skipped"] for run in self.runs) and any(
-                    run.state == "finished" for run in self.runs):
+                run.state == "finished" for run in self.runs
+            ):
                 return "finished"
         return "pending"
 

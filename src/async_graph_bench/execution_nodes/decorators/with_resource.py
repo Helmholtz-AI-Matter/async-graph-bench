@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import logging
 from typing import List
 
-from ...utils import acquire_from_many
+from ...utils import ResourcePool, acquire_from_many
 from ...utils.end_of_data import EndOfData
 
 log = logging.getLogger(__name__)
 
 
-def with_resources(generator, resource_pools: List["ResourcePool"]):
+def with_resources(generator, resource_pools: List[ResourcePool]):
     """
     Decorator that acquires resources from one or multiple ResourcePools,
     passes them into the generator, and ensures resources are released
@@ -39,6 +41,7 @@ def with_resources(generator, resource_pools: List["ResourcePool"]):
 
     # Case 2: multiple ResourcePools
     else:
+
         async def multi_resource_wrapper(item):
             if isinstance(item, EndOfData):
                 async for output in generator(item):

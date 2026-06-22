@@ -5,4 +5,5 @@ class EndOfData:
     Upon receiving an instance of EndOfData, nodes and surrounding layers
     should perform cleanup and finalize processing.
     """
+
     pass

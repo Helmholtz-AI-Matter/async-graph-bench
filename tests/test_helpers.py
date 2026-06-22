@@ -1,5 +1,4 @@
 import pytest
-from bitarray import bitarray
 from async_graph_bench.utils.helpers import (
     get_duplicates,
     build_combined_keys,
@@ -61,11 +60,15 @@ class TestBuildCombinedKeys:
         assert keys == [(0, 0), (0, 1)]
 
     def test_tuple_ids_iterations_first(self):
-        keys = build_combined_keys([(1, 2), (3, 4)], iterations=2, iterations_first=True)
+        keys = build_combined_keys(
+            [(1, 2), (3, 4)], iterations=2, iterations_first=True
+        )
         assert keys == [(0, 1, 2), (1, 1, 2), (0, 3, 4), (1, 3, 4)]
 
     def test_tuple_ids_not_iterations_first(self):
-        keys = build_combined_keys([(1, 2), (3, 4)], iterations=2, iterations_first=False)
+        keys = build_combined_keys(
+            [(1, 2), (3, 4)], iterations=2, iterations_first=False
+        )
         assert keys == [(0, 1, 2), (0, 3, 4), (1, 1, 2), (1, 3, 4)]
 
     def test_zero_iterations(self):

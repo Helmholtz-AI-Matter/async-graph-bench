@@ -38,7 +38,9 @@ class TestDataSourceExecutionWrapper:
     @pytest.mark.asyncio
     async def test_single_iteration_no_iter_field(self):
         ds = SimpleMockDataSource(3)
-        wrapper = DataSourceExecutionWrapper(ds.iter_items, iterations=1, iterations_first=True)
+        wrapper = DataSourceExecutionWrapper(
+            ds.iter_items, iterations=1, iterations_first=True
+        )
 
         items = []
         async for item in wrapper.execute():
@@ -53,7 +55,9 @@ class TestDataSourceExecutionWrapper:
     @pytest.mark.asyncio
     async def test_iterations_first_true(self):
         ds = SimpleMockDataSource(2)
-        wrapper = DataSourceExecutionWrapper(ds.iter_items, iterations=3, iterations_first=True)
+        wrapper = DataSourceExecutionWrapper(
+            ds.iter_items, iterations=3, iterations_first=True
+        )
 
         items = []
         async for item in wrapper.execute():
@@ -67,7 +71,9 @@ class TestDataSourceExecutionWrapper:
     @pytest.mark.asyncio
     async def test_iterations_first_false(self):
         ds = SimpleMockDataSource(2)
-        wrapper = DataSourceExecutionWrapper(ds.iter_items, iterations=3, iterations_first=False)
+        wrapper = DataSourceExecutionWrapper(
+            ds.iter_items, iterations=3, iterations_first=False
+        )
 
         items = []
         async for item in wrapper.execute():
@@ -92,7 +98,9 @@ class TestDataSourceExecutionWrapper:
     @pytest.mark.asyncio
     async def test_unique_idx(self):
         ds = SimpleMockDataSource(3)
-        wrapper = DataSourceExecutionWrapper(ds.iter_items, iterations=2, iterations_first=True)
+        wrapper = DataSourceExecutionWrapper(
+            ds.iter_items, iterations=2, iterations_first=True
+        )
 
         items = []
         async for item in wrapper.execute():

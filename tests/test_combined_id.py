@@ -1,4 +1,7 @@
-from async_graph_bench.stores.combined_id import get_combined_id, get_combined_id_from_parts
+from async_graph_bench.stores.combined_id import (
+    get_combined_id,
+    get_combined_id_from_parts,
+)
 
 
 class TestGetCombinedId:
@@ -45,9 +48,12 @@ class TestGetCombinedIdFromParts:
 
     def test_consistency_with_get_combined_id(self):
         for item in [
-            {"id": 5}, {"id": 5, "iter": 3},
-            {"id": (1, 2)}, {"id": (1, 2), "iter": 7},
-            {"id": "x"}, {"id": "x", "iter": 2},
+            {"id": 5},
+            {"id": 5, "iter": 3},
+            {"id": (1, 2)},
+            {"id": (1, 2), "iter": 7},
+            {"id": "x"},
+            {"id": "x", "iter": 2},
         ]:
             result1 = get_combined_id(item)
             result2 = get_combined_id_from_parts(item["id"], item.get("iter", 0))

@@ -24,12 +24,14 @@ def batching(generator, batch_size):
 
         # Process incoming item
         if not isinstance(item, EndOfData):
-            assert end_of_data_seen is False, "Items were pushed to the batching layer after EndOfData signal was already seen"
+            assert end_of_data_seen is False, (
+                "Items were pushed to the batching layer after EndOfData signal was already seen"
+            )
             async with lock:
                 buffer.append(item)
 
         current_batch = None
-        async with (lock):
+        async with lock:
             # Process a full batch if buffer size meets or exceeds batch_size
             if len(buffer) >= batch_size:
                 current_batch = [buffer.popleft() for _ in range(batch_size)]

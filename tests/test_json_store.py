@@ -1,6 +1,9 @@
 import pytest
-from async_graph_bench.stores.json_store import encode_tuples, decode_tuples, JSONDataStore
-import os
+from async_graph_bench.stores.json_store import (
+    encode_tuples,
+    decode_tuples,
+    JSONDataStore,
+)
 
 
 class TestEncodeDecodeTuples:

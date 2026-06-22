@@ -27,10 +27,7 @@ class NodeExecutionWrapper:
         self.node = node
 
     async def run_node(
-            self,
-            items: List[Dict[str, Any]],
-            *args,
-            **kwargs
+        self, items: List[Dict[str, Any]], *args, **kwargs
     ) -> Union[Dict[str, List[Any]], List[Any]]:
         """
         Aggregates the input items based on node dependencies and runs the node on the inputs.
@@ -52,10 +49,10 @@ class NodeExecutionWrapper:
             return self.node(combined_items, *args, **kwargs)
 
     async def execute(
-            self,
-            items: Union[Dict[str, Any], List[Dict[str, Any]], EndOfData],
-            *args,
-            **kwargs
+        self,
+        items: Union[Dict[str, Any], List[Dict[str, Any]], EndOfData],
+        *args,
+        **kwargs,
     ) -> AsyncIterator[Union[Dict[str, Any], EndOfData]]:
         """
         Executes the wrapped node and yields processed items.
@@ -73,9 +70,11 @@ class NodeExecutionWrapper:
 
         results = await self.run_node(items, *args, **kwargs)
 
-        if hasattr(self.node, 'provides'):  # intermediate node
+        if hasattr(self.node, "provides"):  # intermediate node
             for key, value in results.items():
-                assert len(value) == len(items), f"Length mismatch! len(value)={len(value)}, len(items)={len(items)}"
+                assert len(value) == len(items), (
+                    f"Length mismatch! len(value)={len(value)}, len(items)={len(items)}"
+                )
 
                 for i in range(len(value)):
                     items[i][key] = value[i]
@@ -83,7 +82,9 @@ class NodeExecutionWrapper:
                 yield item
         else:  # consumer node (final result)
             if isinstance(results, dict) and all(
-                    isinstance(v, (list, tuple)) and len(v) == len(items) for v in results.values()):
+                isinstance(v, (list, tuple)) and len(v) == len(items)
+                for v in results.values()
+            ):
                 for idx, item in enumerate(items):
                     to_serialize = dict()
                     to_serialize["id"] = item["id"]
@@ -93,12 +94,11 @@ class NodeExecutionWrapper:
                         to_serialize[key] = value[idx]
                     yield to_serialize
             else:
-                result_prop_identifier = (NodeConfig.base_config or {}).get("prop_name", "value")
+                result_prop_identifier = (NodeConfig.base_config or {}).get(
+                    "prop_name", "value"
+                )
                 for i in range(len(results)):
-                    output = {
-                        "id": items[i]["id"],
-                        result_prop_identifier: results[i]
-                    }
+                    output = {"id": items[i]["id"], result_prop_identifier: results[i]}
                     if "iter" in items[i]:
                         output["iter"] = items[i]["iter"]
                     yield output

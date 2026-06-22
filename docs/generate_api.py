@@ -1,3 +1,6 @@
+import os
+
+
 classes = [
     ("async_graph_bench.data_source", "DataSource"),
     ("async_graph_bench.manager", "BenchmarkManager"),
@@ -13,8 +16,6 @@ classes = [
     # add more (module, class) tuples here
     # e.g. ("async_graph_bench.executor", "Executor"),
 ]
-
-import os
 
 output_dir = "source/api"
 os.makedirs(output_dir, exist_ok=True)

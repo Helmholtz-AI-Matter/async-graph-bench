@@ -57,7 +57,9 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def iter_items(self) -> Union[Iterator[Dict[str, Any]], AsyncIterator[Dict[str, Any]]]:
+    def iter_items(
+        self,
+    ) -> Union[Iterator[Dict[str, Any]], AsyncIterator[Dict[str, Any]]]:
         """Iterate over items in the dataset, yielding one at a time.
 
         Each yielded item is a dictionary containing:
@@ -84,6 +86,7 @@ class DataSource(ABC):
 
 
 # TODO implement to_dataframe on DataSource
+
 
 class DataSourcePartitioner(DataSource):
     """
@@ -124,7 +127,7 @@ class DataSourcePartitioner(DataSource):
                 yield key
 
     def iter_items(
-            self,
+        self,
     ) -> Union[Iterator[Dict[str, List[str]]], AsyncIterator[Dict[str, List[str]]]]:
         src_iter = self._source.iter_items()
 

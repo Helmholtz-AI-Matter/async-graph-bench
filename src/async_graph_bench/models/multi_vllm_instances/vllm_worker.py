@@ -1,12 +1,18 @@
-import logging
-import signal
-from typing import Any, Dict, List
 import contextlib
-import gc, torch
+import gc
+import logging
+import os
+import signal
+import sys
+import traceback
+from typing import Any, Dict, List
+
+import torch
+
 log = logging.getLogger(__name__)
 
-
 # re-use the normalization helper from your server
+
 
 def normalize_chat_input(user_input: Any) -> List[List[Dict[str, Any]]]:
     if isinstance(user_input, str):
@@ -24,11 +30,6 @@ def normalize_chat_input(user_input: Any) -> List[List[Dict[str, Any]]]:
 
 # ---------------- worker function that runs inside subprocess ----------------
 
-import os
-import sys
-import traceback
-import logging
-
 
 def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, debug):
     """
@@ -41,6 +42,7 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
     llm = None
 
     def shutdown(*args, **kwargs):
+        nonlocal llm
         # print("vllm worker attempting graceful shutdown with args=%s kwargs=%s", args, kwargs)
         try:
             result_q.put(None)
@@ -58,7 +60,7 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
             torch.cuda.empty_cache()
             del llm.llm_engine.model_executor.driver_worker
             del llm.llm_engine.model_executor
-            del llm
+            llm = None
         except Exception:
             pass
         sys.exit(0)
@@ -77,6 +79,7 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
     try:
         # local import to avoid vllm import in parent process
         from vllm import LLM, SamplingParams  # noqa: F401
+
         # Initialize LLM
         llm = LLM(model=model_name, **(llm_kwargs or {}))
         # report success of initialization (only to init_q)
@@ -91,7 +94,13 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
         try:
             pid = os.getpid()
             init_q.put(
-                {"status": "error", "error": "llm_init_failed", "pid": pid, "traceback": tb.replace('\\n', '\n')})
+                {
+                    "status": "error",
+                    "error": "llm_init_failed",
+                    "pid": pid,
+                    "traceback": tb.replace("\\n", "\n"),
+                }
+            )
         except Exception:
             pass
         # don't continue main loop: parent should handle this init error
@@ -122,17 +131,33 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
                     sampling_params = kwargs.get("sampling_params")
                     if isinstance(prompts, str):
                         prompts = [prompts]
-                    if not (isinstance(prompts, list) and all(isinstance(p, str) for p in prompts)):
+                    if not (
+                        isinstance(prompts, list)
+                        and all(isinstance(p, str) for p in prompts)
+                    ):
                         raise ValueError("prompts must be str or list[str]")
                     outputs = llm.generate(prompts, sampling_params, use_tqdm=False)
                     result_q.put({"id": req_id, "status": "ok", "result": outputs})
 
                 else:
-                    result_q.put({"id": req_id, "status": "error", "error": f"unknown_method:{method}"})
+                    result_q.put(
+                        {
+                            "id": req_id,
+                            "status": "error",
+                            "error": f"unknown_method:{method}",
+                        }
+                    )
 
             except Exception as e:
                 tb = traceback.format_exc()
                 log.error("Exception inside vllm worker runtime loop: %s", tb)
-                result_q.put({"id": req.get("id"), "status": "error", "error": str(e), "traceback": tb})
+                result_q.put(
+                    {
+                        "id": req.get("id"),
+                        "status": "error",
+                        "error": str(e),
+                        "traceback": tb,
+                    }
+                )
     finally:
         shutdown()

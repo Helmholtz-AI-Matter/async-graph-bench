@@ -1,4 +1,3 @@
-from asyncio import Lock
 from typing import Union, List
 
 from ...utils.end_of_data import EndOfData
@@ -30,7 +29,9 @@ def data_cache(generator, store: DataStore, properties: Union[List[str], "all"])
         async for result in generator(item):
             if not isinstance(result, EndOfData):
                 keys = result.keys() if properties == "all" else properties
-                serialized = {key: value for key, value in result.items() if key in keys}
+                serialized = {
+                    key: value for key, value in result.items() if key in keys
+                }
                 store.save(serialized)
             else:
                 store.flush()
