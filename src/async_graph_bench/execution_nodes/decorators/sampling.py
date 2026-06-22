@@ -6,13 +6,17 @@ from ...utils.end_of_data import EndOfData
 
 
 def sampling(
-        generator: Callable,  # async generator function to wrap (async def g(item): ...)
-        dependencies: Iterable[str],  # required dependencies to sample (e.g. ["dep1", "dep2"])
-        sample_size: int,  # number of iterations per sample
-        total_iterations: int,  # total iterations per id (must be divisible by sample_size)
-        mode: str = "first",  # "first" | "spread" | "extend"
-        spread_keys: Optional[Union[List[str], "all"]] = None,  # required if mode == "spread"
-        # flush_incomplete: bool = False  # if True, flush incomplete samples on EndOfData
+    generator: Callable,  # async generator function to wrap (async def g(item): ...)
+    dependencies: Iterable[
+        str
+    ],  # required dependencies to sample (e.g. ["dep1", "dep2"])
+    sample_size: int,  # number of iterations per sample
+    total_iterations: int,  # total iterations per id (must be divisible by sample_size)
+    mode: str = "first",  # "first" | "spread" | "extend"
+    spread_keys: Optional[
+        Union[List[str], "all"]
+    ] = None,  # required if mode == "spread"
+    # flush_incomplete: bool = False  # if True, flush incomplete samples on EndOfData
 ):
     """
     Wraps an async generator to provide sampled dependencies for items grouped by `id`.
@@ -40,11 +44,16 @@ def sampling(
         - Groups are keyed by `id` and iteration index.
         - In "spread" mode, nodes must return lists of length `sample_size` for the spread keys.
     """
-    assert mode in ("first", "spread", "extend"), "mode must be one of 'first','spread','extend'"
+    assert mode in ("first", "spread", "extend"), (
+        "mode must be one of 'first','spread','extend'"
+    )
     if mode == "spread":
-        assert spread_keys is not None and spread_keys == "all" or len(
-            spread_keys) > 0, "spread_keys required for 'spread' mode"
-    assert total_iterations % sample_size == 0, "total_iterations must be divisible by sample_size"
+        assert (
+            spread_keys is not None and spread_keys == "all" or len(spread_keys) > 0
+        ), "spread_keys required for 'spread' mode"
+    assert total_iterations % sample_size == 0, (
+        "total_iterations must be divisible by sample_size"
+    )
 
     groups_per_id = total_iterations // sample_size
     iteration_groups = defaultdict(
@@ -55,7 +64,7 @@ def sampling(
     eod_emitted = False  # ensure we only emit EoD once
     variations_dict = dict()
 
-    async def wrapped(item : Union[Dict, EndOfData]):
+    async def wrapped(item: Union[Dict, EndOfData]):
         nonlocal end_of_data_seen, eod_emitted
 
         items_to_process = []
@@ -78,20 +87,28 @@ def sampling(
                     completed_variation = iteration_groups[id_][group_id]
                     del iteration_groups[id_][group_id]
                     # cleanup empty id entry
-                    if not any(any(e is not None for e in g) for g in iteration_groups[id_]): # all are None - delete the entire dict for the id to save memory
+                    if not any(
+                        any(e is not None for e in g) for g in iteration_groups[id_]
+                    ):  # all are None - delete the entire dict for the id to save memory
                         del iteration_groups[id_]
 
             # process completed variation(s) outside lock
             if completed_variation is not None:
                 variations_to_process = [completed_variation]
-                if mode=="extend": # do all variations
+                if mode == "extend":  # do all variations
                     for shift in range(1, len(completed_variation)):
-                        rotated = completed_variation[shift:] + completed_variation[:shift]
+                        rotated = (
+                            completed_variation[shift:] + completed_variation[:shift]
+                        )
                         variations_to_process.append(rotated)
                 # variation abspeichern wenn spread, um sie später zurück spreaden zu können
                 elif mode == "spread":
-                    variations_dict[(completed_variation[0]["id"], completed_variation[0].get("iter", 0))] = completed_variation
-
+                    variations_dict[
+                        (
+                            completed_variation[0]["id"],
+                            completed_variation[0].get("iter", 0),
+                        )
+                    ] = completed_variation
 
                 # variations to process um dependencies erweitern, dann zu items_to process hinzufügen
                 for variation in variations_to_process:
@@ -100,8 +117,6 @@ def sampling(
                         combined_key = "sampled_" + key
                         combined[combined_key] = [it[key] for it in variation]
                     items_to_process.append(combined)
-
-
 
         # This needs changing
         for item in items_to_process:
@@ -112,7 +127,9 @@ def sampling(
                     if mode == "first" or mode == "extend":
                         yield out
                     else:  # spread
-                        completed_variation = variations_dict.pop((out["id"], out.get("iter", 0)))
+                        completed_variation = variations_dict.pop(
+                            (out["id"], out.get("iter", 0))
+                        )
 
                         # out must contain keys in spread_keys mapping to lists of length sample_size
                         # scalar outputs will be copied to every produced item
@@ -124,16 +141,21 @@ def sampling(
                                 base["iter"] = item["iter"]
                             else:
                                 base = item.copy()
-                            keys = list((set(out.keys()) - {"id", "iter"}) if spread_keys == "all" else spread_keys)
+                            keys = list(
+                                (set(out.keys()) - {"id", "iter"})
+                                if spread_keys == "all"
+                                else spread_keys
+                            )
                             for k in keys:
                                 val_list = out.get(k)
-                                if isinstance(val_list, list) and len(val_list) == len(completed_variation):
+                                if isinstance(val_list, list) and len(val_list) == len(
+                                    completed_variation
+                                ):
                                     base[k] = val_list[i]
                                 else:
                                     # if not a list, set same value for all iterations
                                     base[k] = out.get(k)
                             # print(f"[sampling] yielding id={base['id']}, iter={base['iter']}")
                             yield base
-
 
     return wrapped

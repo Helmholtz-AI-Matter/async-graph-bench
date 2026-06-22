@@ -9,7 +9,6 @@ from typing import List, Union
 
 import diskcache as dc
 import torch
-import torch.nn as nn
 from cachetools import LRUCache, cached
 from transformers import DebertaForSequenceClassification, DebertaTokenizer
 
@@ -38,7 +37,9 @@ def _prepare_nli_lists(greedy_alternatives):
     greedy_alternatives_nli = []
 
     for g_idx, sample_alternatives in enumerate(greedy_alternatives):
-        nli_list = [[None] * (len(alternatives) - 1) for alternatives in sample_alternatives]
+        nli_list = [
+            [None] * (len(alternatives) - 1) for alternatives in sample_alternatives
+        ]
         for w_idx, word_alternatives in enumerate(sample_alternatives):
             word = _strip(word_alternatives[0][0])
             for alt_idx, alt in enumerate(word_alternatives[1:]):
@@ -54,13 +55,23 @@ def _prepare_nli_lists(greedy_alternatives):
     return greedy_alternatives_nli, nli_queue
 
 
-def _process_nli_queue(nli_queue, nli_list, model, tokenizer, device, batch_size,
-                       ent_id, contra_id, neut_id):
+def _process_nli_queue(
+    nli_queue,
+    nli_list,
+    model,
+    tokenizer,
+    device,
+    batch_size,
+    ent_id,
+    contra_id,
+    neut_id,
+):
     """
     Run batches, fill nli_list, update cache.
     """
     global worker_cache
     from collections import defaultdict
+
     occ = defaultdict(list)
     for token_tuple, g_idx, w_idx, alt_idx in nli_queue:
         occ[token_tuple].append((g_idx, w_idx, alt_idx))
@@ -70,22 +81,19 @@ def _process_nli_queue(nli_queue, nli_list, model, tokenizer, device, batch_size
 
     # Build forward/backward pairs
     pairs = []
-    for (a, b) in unique_token_tuples:
+    for a, b in unique_token_tuples:
         pairs.append((a, b))
         pairs.append((b, a))
 
     all_preds: List[int] = []
     with torch.inference_mode():
         for i in range(0, len(pairs), batch_size):
-            batch_pairs = pairs[i:i + batch_size]
+            batch_pairs = pairs[i : i + batch_size]
             firsts = [p[0] for p in batch_pairs]
             seconds = [p[1] for p in batch_pairs]
 
             encoded = tokenizer(
-                firsts, seconds,
-                padding=True,
-                truncation=True,
-                return_tensors="pt"
+                firsts, seconds, padding=True, truncation=True, return_tensors="pt"
             )
             encoded = {k: v.to(device, non_blocking=True) for k, v in encoded.items()}
 
@@ -109,7 +117,7 @@ def _process_nli_queue(nli_queue, nli_list, model, tokenizer, device, batch_size
         combined = _combine_nli(forward, backward)
         worker_cache[token_tuple] = combined
         lru_cache.pop(token_tuple, None)
-        for (g_idx, w_idx, alt_idx) in occ[token_tuple]:
+        for g_idx, w_idx, alt_idx in occ[token_tuple]:
             nli_list[g_idx][w_idx][alt_idx] = combined
 
 
@@ -139,7 +147,9 @@ def _combine_nli(forward: int, backward: int) -> int:
     return 0
 
 
-def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, gpu_ids, debug, cache_path):
+def _encoder_worker_main(
+    init_q, request_q, result_q, model_name, model_kwargs, gpu_ids, debug, cache_path
+):
     """
     Runs in subprocess. Handles encoder model requests (token_tuples -> combined NLI results).
     """
@@ -150,13 +160,13 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
     device = "cpu"
 
     def shutdown(*args, **kwargs):
+        nonlocal model
         try:
             result_q.put(None)
         except Exception:
             pass
         try:
-            if model is not None:
-                del model
+            model = None
         except Exception:
             pass
         try:
@@ -178,19 +188,18 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
         device = "cuda" if len(gpu_ids) > 0 else "cpu"
 
     try:
-
         # Create cache in worker
         worker_cache = dc.Cache(
             cache_path,
-            size_limit=20 * 1024 ** 3,
-            disk_min_file_size=2 ** 18,
-            eviction_policy='none'
+            size_limit=20 * 1024**3,
+            disk_min_file_size=2**18,
+            eviction_policy="none",
         )
         tokenizer = DebertaTokenizer.from_pretrained(model_name)
         model = DebertaForSequenceClassification.from_pretrained(
             model_name,
             problem_type="multi_label_classification",
-            **(model_kwargs or {})
+            **(model_kwargs or {}),
         )
         model = torch.compile(model)  # optional but often a big win
         model.to(device)
@@ -202,18 +211,19 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
         contra_id = model.config.label2id["CONTRADICTION"]
         neut_id = model.config.label2id["NEUTRAL"]
 
-        softmax = nn.Softmax(dim=1)
         init_q.put({"status": "ok"})
     except Exception:
         tb = traceback.format_exc()
         try:
             pid = os.getpid()
-            init_q.put({
-                "status": "error",
-                "error": "encoder_init_failed",
-                "pid": pid,
-                "traceback": tb.replace('\\n', '\n')
-            })
+            init_q.put(
+                {
+                    "status": "error",
+                    "error": "encoder_init_failed",
+                    "pid": pid,
+                    "traceback": tb.replace("\\n", "\n"),
+                }
+            )
         except Exception:
             pass
         return
@@ -238,7 +248,7 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
 
                     # Build forward/backward pairs
                     pairs = []
-                    for (a, b) in token_tuples:
+                    for a, b in token_tuples:
                         pairs.append((a, b))
                         pairs.append((b, a))
 
@@ -250,17 +260,21 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
                     all_preds: List[int] = []
                     with torch.inference_mode():
                         for i in range(0, len(pairs), batch_size):
-                            batch_pairs = pairs[i:i + batch_size]
+                            batch_pairs = pairs[i : i + batch_size]
                             firsts = [p[0] for p in batch_pairs]
                             seconds = [p[1] for p in batch_pairs]
 
                             encoded = tokenizer(
-                                firsts, seconds,
+                                firsts,
+                                seconds,
                                 padding=True,
                                 truncation=True,
-                                return_tensors="pt"
+                                return_tensors="pt",
                             )
-                            encoded = {k: v.to(device, non_blocking=True) for k, v in encoded.items()}
+                            encoded = {
+                                k: v.to(device, non_blocking=True)
+                                for k, v in encoded.items()
+                            }
 
                             logits = model(**encoded).logits
 
@@ -280,7 +294,8 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
                                     all_preds.append(0)
                                 else:
                                     raise ValueError(
-                                        f"Predicted id {pid} not in possible ids of classes ENTAILMENT {ent_id}, CONTRADICTION {contra_id}, NEUTRAL {neut_id}")
+                                        f"Predicted id {pid} not in possible ids of classes ENTAILMENT {ent_id}, CONTRADICTION {contra_id}, NEUTRAL {neut_id}"
+                                    )
 
                     # Combine forward/backward predictions per token_tuple
                     results: List[int] = []
@@ -294,32 +309,52 @@ def _encoder_worker_main(init_q, request_q, result_q, model_name, model_kwargs, 
 
                 elif method == "encode_full":
                     # Args: greedy_alternatives
-                    greedy_alternatives = args[0] if args else kwargs.get("greedy_alternatives")
+                    greedy_alternatives = (
+                        args[0] if args else kwargs.get("greedy_alternatives")
+                    )
                     batch_size = kwargs.get("batch_size", 512)
 
-                    greedy_alternatives_nli, nli_queue = _prepare_nli_lists(greedy_alternatives)
+                    greedy_alternatives_nli, nli_queue = _prepare_nli_lists(
+                        greedy_alternatives
+                    )
                     if nli_queue:
                         _process_nli_queue(
-                            nli_queue, greedy_alternatives_nli,
-                            model, tokenizer, device, batch_size,
-                            ent_id, contra_id, neut_id,
+                            nli_queue,
+                            greedy_alternatives_nli,
+                            model,
+                            tokenizer,
+                            device,
+                            batch_size,
+                            ent_id,
+                            contra_id,
+                            neut_id,
                         )
 
-                    result_q.put({"id": req_id, "status": "ok", "result": greedy_alternatives_nli})
+                    result_q.put(
+                        {
+                            "id": req_id,
+                            "status": "ok",
+                            "result": greedy_alternatives_nli,
+                        }
+                    )
                 else:
-                    result_q.put({
-                        "id": req_id,
-                        "status": "error",
-                        "error": f"unknown_method:{method}"
-                    })
+                    result_q.put(
+                        {
+                            "id": req_id,
+                            "status": "error",
+                            "error": f"unknown_method:{method}",
+                        }
+                    )
 
             except Exception as e:
                 tb = traceback.format_exc()
-                result_q.put({
-                    "id": req.get("id"),
-                    "status": "error",
-                    "error": str(e),
-                    "traceback": tb
-                })
+                result_q.put(
+                    {
+                        "id": req.get("id"),
+                        "status": "error",
+                        "error": str(e),
+                        "traceback": tb,
+                    }
+                )
     finally:
         shutdown()

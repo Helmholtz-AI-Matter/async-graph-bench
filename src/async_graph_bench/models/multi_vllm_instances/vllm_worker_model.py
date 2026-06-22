@@ -1,32 +1,28 @@
-import aiohttp
-import pickle
+from __future__ import annotations
 
-try:
-    from vllm.distributed.parallel_state import (
-        destroy_model_parallel,
-        destroy_distributed_environment,
-    )
-    from vllm.sampling_params import SamplingParams
-except ImportError as e:
+import importlib.util
+
+if importlib.util.find_spec("vllm") is None:
     raise ImportError(
         "To use this functionality, you need to install the 'vllm' module"
-    ) from e
-try:
-    import torch
-except ImportError as e:
-    raise ImportError("To use this functionality, you need to install the 'torch' module") from e
+    )
+if importlib.util.find_spec("torch") is None:
+    raise ImportError(
+        "To use this functionality, you need to install the 'torch' module"
+    )
 
-import contextlib
-import gc
-from typing import List, Tuple, Union, Dict, Any
-from .. import Model, GenerationParameters, ResponseWrapper
-
+from .worker_client import WorkerClient
 from ..vllm_model import sampling_params_from_generation_params
-from ..vllm_response_wrapper import VLLMResponseWrapper, ReasoningParserMode
+from ..vllm_response_wrapper import VLLMResponseWrapper
 
 
 class RemoteVLLMModel:
-    def __init__(self, worker_client: "WorkerClient", use_chat_template: bool = True, reasoning_parser_mode=None):
+    def __init__(
+        self,
+        worker_client: "WorkerClient",
+        use_chat_template: bool = True,
+        reasoning_parser_mode=None,
+    ):
         self.worker_client = worker_client
         self.use_chat_template = use_chat_template
         self.reasoning_parser_mode = reasoning_parser_mode
@@ -37,7 +33,10 @@ class RemoteVLLMModel:
         response = await self.worker_client.call(
             "generate" if not self.use_chat_template else "chat",
             prompt,
-            sampling_params=sampling_params
+            sampling_params=sampling_params,
         )
-        return VLLMResponseWrapper(response, n_logprobs=getattr(generation_params, "logprobs", None),
-                                   reasoning_parser_mode=self.reasoning_parser_mode)
+        return VLLMResponseWrapper(
+            response,
+            n_logprobs=getattr(generation_params, "logprobs", None),
+            reasoning_parser_mode=self.reasoning_parser_mode,
+        )

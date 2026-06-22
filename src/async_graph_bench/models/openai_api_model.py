@@ -1,6 +1,5 @@
 import asyncio
 import os
-import logging
 import json
 from typing import Dict
 from types import SimpleNamespace
@@ -10,49 +9,50 @@ from .openai_api_response_wrapper import OpenAIAPIResponseWrapper
 
 from .abstract_classes import Model, GenerationParameters
 
-import logging
-
 
 def _should_dryrun() -> bool:
     """Check if dryrun mode is enabled via environment variable."""
     return os.environ.get("ASYNC_GRAPH_DRYRUN") == "1"
 
 
-def _print_curl_command(url: str, headers: dict, payload: dict,
-                        enforce_url_suffix: bool = True) -> None:
+def _print_curl_command(
+    url: str, headers: dict, payload: dict, enforce_url_suffix: bool = True
+) -> None:
     """Print a curl command that replicates the API call."""
     # Build curl headers
     curl_headers = []
     for header, value in headers.items():
-        if 'authorization' in header.lower():
+        if "authorization" in header.lower():
             curl_headers.append('-H "Authorization: Bearer ${OPENAI_API_KEY}" \\')
         else:
             curl_headers.append(f"-H '{header}: {value}' \\")
 
     if enforce_url_suffix:
-        if not (url.endswith('completions') or url.endswith('completions/')):
+        if not (url.endswith("completions") or url.endswith("completions/")):
             suffix = "chat/completions" if url.endswith("/") else "/chat/completions"
             url = url + suffix
     # Build curl command
     curl_parts = [
         f"curl '{url}' \\",
         "\n".join(curl_headers),
-#        f"-X POST \\",
-        f"-d '{json.dumps(payload, indent=2)}'"
+        #        f"-X POST \\",
+        f"-d '{json.dumps(payload, indent=2)}'",
     ]
-    
+
     curl_cmd = "\n".join(curl_parts)
-    print(f"\n{'='*80}")
-    print(f"DRYRUN - HTTP Request that would be made:")
-    print(f"{'='*80}")
+    print(f"\n{'=' * 80}")
+    print("DRYRUN - HTTP Request that would be made:")
+    print(f"{'=' * 80}")
     print(f"URL: {url}")
     print(f"Payload:\n{json.dumps(payload, indent=2)}")
-    print(f"\nCurl command:")
+    print("\nCurl command:")
     print(curl_cmd)
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
 
-def sampling_params_from_generation_params(generation_params: GenerationParameters) -> Dict:
+def sampling_params_from_generation_params(
+    generation_params: GenerationParameters,
+) -> Dict:
     params = generation_params.to_dict()
     if "logprobs" in params:
         if params["logprobs"] != 0:
@@ -67,7 +67,9 @@ def _create_mock_response(use_chat: bool, has_logprobs: bool, n_choices: int = 1
     for _ in range(n_choices):
         choice = SimpleNamespace()
         if use_chat:
-            choice.message = SimpleNamespace(content="mock response", reasoning_content=None)
+            choice.message = SimpleNamespace(
+                content="mock response", reasoning_content=None
+            )
         else:
             choice.text = "mock response"
         choice.finish_reason = "mock_complete"
@@ -77,19 +79,19 @@ def _create_mock_response(use_chat: bool, has_logprobs: bool, n_choices: int = 1
         else:
             choice.logprobs = None
         choices.append(choice)
-    
+
     response = SimpleNamespace(choices=choices)
     return response
 
 
 class OpenAIAPIModel(Model):
     def __init__(
-            self,
-            model_id: str,
-            openai_api_key: str = None,
-            openai_endpoint: str = None,
-            limit_logprobs: bool = False,
-            use_chat: bool = True,
+        self,
+        model_id: str,
+        openai_api_key: str = None,
+        openai_endpoint: str = None,
+        limit_logprobs: bool = False,
+        use_chat: bool = True,
     ):
         """
         use_chat: True => call chat.completions.create with `messages=...`
@@ -111,7 +113,9 @@ class OpenAIAPIModel(Model):
             self._create = self.openai_api.completions.create
             self._payload_kw = "prompt"
 
-    async def query(self, prompt, generation_params: GenerationParameters) -> OpenAIAPIResponseWrapper:
+    async def query(
+        self, prompt, generation_params: GenerationParameters
+    ) -> OpenAIAPIResponseWrapper:
         wrapper = OpenAIAPIResponseWrapper(
             n_logprobs=generation_params.logprobs
             if self.limit_logprobs and hasattr(generation_params, "logprobs")
@@ -129,7 +133,9 @@ class OpenAIAPIModel(Model):
         payloads = []
 
         if isinstance(prompt, str):
-            payloads = ([{"role": "user", "content": prompt}] if self.use_chat else prompt)
+            payloads = (
+                [{"role": "user", "content": prompt}] if self.use_chat else prompt
+            )
             # wrap into list-of-payloads
             payloads = [payloads]
 
@@ -153,7 +159,12 @@ class OpenAIAPIModel(Model):
                     payloads = [messages_to_text(prompt)]
 
             # list[list[dict]] -> multiple messages payloads
-            elif all(isinstance(item, list) and item and all(isinstance(m, dict) for m in item) for item in prompt):
+            elif all(
+                isinstance(item, list)
+                and item
+                and all(isinstance(m, dict) for m in item)
+                for item in prompt
+            ):
                 if self.use_chat:
                     payloads = list(prompt)  # already list of messages lists
                 else:
@@ -173,20 +184,21 @@ class OpenAIAPIModel(Model):
                 call_kwargs = {**base_params, "messages": p}
             else:
                 call_kwargs = {**base_params, "prompt": p}
-            
+
             # Dryrun mode: print curl command instead of making request
             if _should_dryrun():
                 headers = {
                     "Authorization": f"Bearer {self.openai_api.api_key}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 }
                 _print_curl_command(str(self.openai_api.base_url), headers, call_kwargs)
                 # Skip actual HTTP call - return mock response which will cause the benchmark to fail
                 mock_response = _create_mock_response(
-                    use_chat=self.use_chat,
-                    has_logprobs=params.get('logprobs', 0) > 0
+                    use_chat=self.use_chat, has_logprobs=params.get("logprobs", 0) > 0
                 )
-                tasks.append(asyncio.create_task(asyncio.sleep(0, result=mock_response)))
+                tasks.append(
+                    asyncio.create_task(asyncio.sleep(0, result=mock_response))
+                )
             else:
                 tasks.append(self._create(**call_kwargs))
 

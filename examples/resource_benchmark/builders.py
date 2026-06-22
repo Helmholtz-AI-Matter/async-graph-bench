@@ -13,13 +13,14 @@ class Endpoint:
 
 def get_openai_api_builder(endpoints: List[Endpoint]):
     from async_graph_bench.models.openai_api_model import OpenAIAPIModel
+
     def build_resources(env):
         if not hasattr(env, "main_resource"):
             models = [
                 OpenAIAPIModel(
                     model_id=endpoint.model,
                     openai_endpoint=endpoint.base_url,
-                    openai_api_key=endpoint.api_key
+                    openai_api_key=endpoint.api_key,
                 )
                 for endpoint in endpoints
             ]
@@ -29,25 +30,39 @@ def get_openai_api_builder(endpoints: List[Endpoint]):
     return build_resources
 
 
-def get_vllm_builder(model_id: str, llm_args: Dict, use_chat_template=True, reasoning_parser_model=None):
-    from vllm import LLM  # lazy importing so packages are only required if the resource builder is generated
+def get_vllm_builder(
+    model_id: str, llm_args: Dict, use_chat_template=True, reasoning_parser_model=None
+):
+    from vllm import (
+        LLM,
+    )  # lazy importing so packages are only required if the resource builder is generated
     from async_graph_bench.models.vllm_model import VLLMModel
+
     def build_resources(env):
         if not hasattr(env, "main_resource"):
             llm = LLM(model=model_id, **llm_args)
-            vllm_model = VLLMModel(llm, use_chat_template=use_chat_template,
-                                   reasoning_parser_mode=reasoning_parser_model)
+            vllm_model = VLLMModel(
+                llm,
+                use_chat_template=use_chat_template,
+                reasoning_parser_mode=reasoning_parser_model,
+            )
             env.main_resource = ResourcePool([vllm_model])
         return env.main_resource
 
     return build_resources
 
 
-def get_vllm_multi_instance_builder(model_id: str, llm_args: dict, use_chat_template=True,
-                                          reasoning_parser_mode=None):
+def get_vllm_multi_instance_builder(
+    model_id: str, llm_args: dict, use_chat_template=True, reasoning_parser_mode=None
+):
     import GPUtil
+
     device_count = len(GPUtil.getAvailable())
-    from async_graph_bench.models.multi_instances.vllm import start_workers, RemoteVLLMModel
+    from async_graph_bench.models.multi_instances.vllm import (
+        start_workers,
+        RemoteVLLMModel,
+    )
+
     async def builder(env):
         if not hasattr(env, "main_model_pool"):
             print("GPUs detected for usage of worker building: ", device_count)
@@ -65,7 +80,7 @@ def get_vllm_multi_instance_builder(model_id: str, llm_args: dict, use_chat_temp
                 RemoteVLLMModel(
                     worker_client,
                     use_chat_template=True,
-                    reasoning_parser_mode=reasoning_parser_mode
+                    reasoning_parser_mode=reasoning_parser_mode,
                 )
                 for worker_client in worker_clients
             ]

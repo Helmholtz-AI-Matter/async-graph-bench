@@ -1,4 +1,3 @@
-import pytest
 from async_graph_bench.stores.serializers.pickle import PickleSerializer
 from async_graph_bench.stores.serializers.zlib import ZLibCompressionSerializer
 from async_graph_bench.stores.serializers.message_pack import MessagePackSerializer

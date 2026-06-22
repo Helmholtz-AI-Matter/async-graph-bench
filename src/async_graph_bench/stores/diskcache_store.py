@@ -27,7 +27,9 @@ def truncate_innermost_arrays(arr: np.ndarray) -> np.ndarray:
     min_length = min(len(inner) for inner in innermost_arrays)
 
     # Truncate all innermost arrays to this minimum length
-    truncated_arr = np.array([[inner[:min_length] for inner in outer] for outer in arr], dtype=object)
+    truncated_arr = np.array(
+        [[inner[:min_length] for inner in outer] for outer in arr], dtype=object
+    )
 
     return truncated_arr
 
@@ -36,8 +38,15 @@ _sentinel = object()
 
 
 class DiskCacheStore(DataStore):
-
-    def __init__(self, directory, filename, serializers: List[Serializer] = None, create_okay=False, *args, **kwargs):
+    def __init__(
+        self,
+        directory,
+        filename,
+        serializers: List[Serializer] = None,
+        create_okay=False,
+        *args,
+        **kwargs,
+    ):
         """
         Initialize the store.
 
@@ -48,18 +57,23 @@ class DiskCacheStore(DataStore):
         self.cache_path = os.path.join(directory, filename)
         if not os.path.exists(self.cache_path):
             if not create_okay:
-                raise FileNotFoundError(f"Cache file {self.cache_path} does not exist and create_okay is set to False.")
+                raise FileNotFoundError(
+                    f"Cache file {self.cache_path} does not exist and create_okay is set to False."
+                )
             log.info(f"Diskcache {self.cache_path} not found, creating it.")
         self.cache = Cache(
             self.cache_path,
             # Note: The actual size on disk may exceed this size_limit due to 'cull_limit' set to 0 -- 20 GB is only the max file size that can be written
             # This does not limit the cache size, only the size of individual files written to disk.
-            size_limit=20 * 1024 ** 3,  # 20GB
-            disk_min_file_size=2 ** 18,  # 256 kb
-            eviction_policy='none'  # should not remove items
+            size_limit=20 * 1024**3,  # 20GB
+            disk_min_file_size=2**18,  # 256 kb
+            eviction_policy="none",  # should not remove items
         )
-        self.cache.reset('cull_limit', 0)  # Disable automatic evictions.
-        self.serializers = serializers or [PickleSerializer(), ZLibCompressionSerializer()]
+        self.cache.reset("cull_limit", 0)  # Disable automatic evictions.
+        self.serializers = serializers or [
+            PickleSerializer(),
+            ZLibCompressionSerializer(),
+        ]
         # self.properties = properties
 
     def save(self, item):
@@ -94,7 +108,11 @@ class DiskCacheStore(DataStore):
         :yield: Each key (ID) one by one.
         """
         for combined_key in self.cache.iterkeys():
-            yield (combined_key[1:], combined_key[0]) if len(combined_key) > 2 else (combined_key[1], combined_key[0])
+            yield (
+                (combined_key[1:], combined_key[0])
+                if len(combined_key) > 2
+                else (combined_key[1], combined_key[0])
+            )
         # yield from self.cache.iterkeys()
 
     def iter_items(self):
@@ -150,7 +168,7 @@ class DiskCacheStore(DataStore):
             # Deserialize the item in reverse order
             for serializer in reversed(self.serializers):
                 serialized = serializer.deserialize(serialized)
-            if not "iter" in serialized:
+            if "iter" not in serialized:
                 serialized["iter"] = 0
 
             if properties is not None:

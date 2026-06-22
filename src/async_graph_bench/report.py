@@ -1,8 +1,12 @@
-import csv
+from __future__ import annotations
+
 import os
 import time
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from .manager import BenchmarkManager
 
 from .utils.helpers import get_resolved_keys, resolved_ids_to_bitarray
 
@@ -36,7 +40,12 @@ class BenchmarkReport:
         ]
         self.total_time: float = sum(self.step_times)
         self.finish_time: Optional[float] = next(
-            (run.end_time for run in reversed(manager.runs) if hasattr(run, "end_time")), None
+            (
+                run.end_time
+                for run in reversed(manager.runs)
+                if hasattr(run, "end_time")
+            ),
+            None,
         )
 
         self.nodes: Dict[str, NodeReport] = self._collect_node_reports()
@@ -46,7 +55,9 @@ class BenchmarkReport:
         runs = self.manager.runs
 
         topological_ordered_nodes, _ = adg.get_nodes_and_edges_in_topological_order()
-        topological_greedy_nodes = [n for n in topological_ordered_nodes if n in adg.greedy_nodes_configs]
+        topological_greedy_nodes = [
+            n for n in topological_ordered_nodes if n in adg.greedy_nodes_configs
+        ]
         nodes = topological_greedy_nodes
 
         report_nodes: Dict[str, NodeReport] = {}
@@ -57,19 +68,31 @@ class BenchmarkReport:
 
             # Determine start and end counts
             start_count = next(
-                (run.resolved_at_start[node.id][0] for run in runs if node.id in run.resolved_at_start),
-                0
+                (
+                    run.resolved_at_start[node.id][0]
+                    for run in runs
+                    if node.id in run.resolved_at_start
+                ),
+                0,
             )
 
             store = self.manager.store_per_node.get(node.id, None)
             if store is not None:
-                resolved_ids = get_resolved_keys(store=store, node_config=node, iteration_count=self.manager.iterations)
-                ba = resolved_ids_to_bitarray(self.manager.data_source_item_index, resolved_ids)
+                resolved_ids = get_resolved_keys(
+                    store=store,
+                    node_config=node,
+                    iteration_count=self.manager.iterations,
+                )
+                ba = resolved_ids_to_bitarray(
+                    self.manager.data_source_item_index, resolved_ids
+                )
                 end_count = ba.count(1)
             else:
                 end_count = 0
 
-            step_counts = [run.resolved_at_start.get(node.id, ("",))[0] for run in runs] + [end_count]
+            step_counts = [
+                run.resolved_at_start.get(node.id, ("",))[0] for run in runs
+            ] + [end_count]
             delta = end_count - start_count
             report_nodes[node.id] = NodeReport(
                 node_id=node.id,
@@ -78,7 +101,7 @@ class BenchmarkReport:
                 start_count=start_count,
                 end_count=end_count,
                 step_counts=step_counts,
-                delta=delta
+                delta=delta,
             )
 
         return report_nodes
@@ -139,16 +162,13 @@ class BenchmarkReport:
         header, columns, rows = self._build_table_data()
 
         md_header = (
-                f"**{header}**\n\n"
-                + " | ".join(columns)
-                + "\n"
-                + " | ".join(["---"] * len(columns))
-                + "\n"
+            f"**{header}**\n\n"
+            + " | ".join(columns)
+            + "\n"
+            + " | ".join(["---"] * len(columns))
+            + "\n"
         )
-        lines = [
-            " | ".join(row)
-            for row in rows
-        ]
+        lines = [" | ".join(row) for row in rows]
         return md_header + "\n".join(lines) + "\n"
 
     def to_table(self) -> str:
@@ -162,7 +182,13 @@ class BenchmarkReport:
         ]
 
         def fmt_row(row):
-            return "│ " + " │ ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)) + " │"
+            return (
+                "│ "
+                + " │ ".join(
+                    str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)
+                )
+                + " │"
+            )
 
         top = "┌" + "┬".join("─" * (w + 2) for w in col_widths) + "┐"
         sep = "├" + "┼".join("─" * (w + 2) for w in col_widths) + "┤"
@@ -178,10 +204,7 @@ class BenchmarkReport:
         header = list(self.nodes.keys())
 
         # deltas for each node
-        row = [
-            str(node.end_count - node.start_count)
-            for node in self.nodes.values()
-        ]
+        row = [str(node.end_count - node.start_count) for node in self.nodes.values()]
 
         # additional columns for benchmark meta info
         header += ["State", "RunTime", "FinishTime"]
@@ -223,7 +246,9 @@ class BenchmarkReport:
         # If headers match → normal append
         if existing_header == new_header_full:
             new_df = pd.DataFrame([new_row_full], columns=new_header_full)
-            pd.concat([existing_df, new_df], ignore_index=True).to_csv(path, index=False)
+            pd.concat([existing_df, new_df], ignore_index=True).to_csv(
+                path, index=False
+            )
             return
 
         # -------- HEADER MISMATCH → MERGE MODE --------
@@ -237,8 +262,10 @@ class BenchmarkReport:
             idx_finish = header.index("FinishTime")
 
             node_cols = header[:idx_state]
-            meta_cols = header[idx_state:idx_finish + 1]  # ["State", "RunTime", "FinishTime"]
-            extra_cols = header[idx_finish + 1:]
+            meta_cols = header[
+                idx_state : idx_finish + 1
+            ]  # ["State", "RunTime", "FinishTime"]
+            extra_cols = header[idx_finish + 1 :]
 
             return node_cols, meta_cols, extra_cols
 
@@ -247,10 +274,14 @@ class BenchmarkReport:
 
         # Sanity: meta columns always identical order by design
         # Merge node columns while keeping original ordering
-        merged_node_cols = old_node_cols + [c for c in new_node_cols if c not in old_node_cols]
+        merged_node_cols = old_node_cols + [
+            c for c in new_node_cols if c not in old_node_cols
+        ]
 
         # Merge extra columns while keeping original ordering
-        merged_extra_cols = old_extra_cols + [c for c in new_extra_cols if c not in old_extra_cols]
+        merged_extra_cols = old_extra_cols + [
+            c for c in new_extra_cols if c not in old_extra_cols
+        ]
 
         # Final unified column order
         final_columns = merged_node_cols + old_meta_cols + merged_extra_cols

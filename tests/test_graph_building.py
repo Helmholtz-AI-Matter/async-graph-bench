@@ -1,57 +1,59 @@
-import pytest
 from typing import List, Dict, Any
 from async_graph_bench import (
-    DataSource,
     NodeConfig,
     CSVDataStore,
-    SamplingConfig,
     BenchmarkManager,
     ResourcePool,
 )
 from async_graph_bench.utils import BuilderEnvironment
 from tests.fixtures import MockNode, SimpleMockDataSource
-from tests.mock_llm import MockLLMModel, QUESTIONS
 
 
 class ValueAdderNode:
     """Intermediate node that adds a value to each item."""
+
     def __init__(self, add_val: int = 1):
         self.requires = ["value"]
         self.provides = ["value_added"]
         self._add_val = add_val
 
-    def __call__(self, item_stats: Dict[str, List[Any]], **kwargs) -> Dict[str, List[Any]]:
-        return {
-            "value_added": [v + self._add_val for v in item_stats["value"]]
-        }
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], **kwargs
+    ) -> Dict[str, List[Any]]:
+        return {"value_added": [v + self._add_val for v in item_stats["value"]]}
 
 
 class TextLengthNode:
     """Intermediate node that computes text length."""
+
     requires = ["text"]
     provides = ["text_len"]
 
-    def __call__(self, item_stats: Dict[str, List[Any]], **kwargs) -> Dict[str, List[Any]]:
-        return {
-            "text_len": [len(t) for t in item_stats["text"]]
-        }
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], **kwargs
+    ) -> Dict[str, List[Any]]:
+        return {"text_len": [len(t) for t in item_stats["text"]]}
 
 
 class ConsumerNode:
     """Consumer node that produces final output (no provides)."""
+
     requires = ["text_len", "value_added"]
 
     def __call__(self, item_stats: Dict[str, List[Any]], **kwargs) -> List[Any]:
         lengths = item_stats["text_len"]
         values = item_stats["value_added"]
-        return [l * v for l, v in zip(lengths, values)]
+        return [length * v for length, v in zip(lengths, values)]
 
 
 class SamplerNode:
     """Consumer that relies on sampled data."""
+
     requires = ["sampled_value_added"]
 
-    def __call__(self, item_stats: Dict[str, List[Any]], **kwargs) -> Dict[str, List[Any]]:
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], **kwargs
+    ) -> Dict[str, List[Any]]:
         samples = item_stats["sampled_value_added"]
         return {
             "sum": [sum(s) for s in samples],
@@ -103,6 +105,7 @@ class TestGraphWithCacheSkip:
         assert first_state == "finished"
 
         import warnings
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             mgr2 = BenchmarkManager(
@@ -148,7 +151,9 @@ class TestGraphWithResourcePools:
             requires = ["value"]
             provides = ["res_out"]
 
-            def __call__(self, item_stats: Dict[str, List[Any]], resource: str, **kwargs) -> Dict[str, List[Any]]:
+            def __call__(
+                self, item_stats: Dict[str, List[Any]], resource: str, **kwargs
+            ) -> Dict[str, List[Any]]:
                 return {"res_out": [v * 2 for v in item_stats["value"]]}
 
         def build_resource(env: BuilderEnvironment) -> ResourcePool:
@@ -156,7 +161,9 @@ class TestGraphWithResourcePools:
             return ResourcePool(["shared_resource"])
 
         res_cfg = NodeConfig(ResNode(), resource_builder=build_resource)
-        consumer = NodeConfig(MockNode(requires=["res_out"]), greedy=True, data_store=CSVDataStore)
+        consumer = NodeConfig(
+            MockNode(requires=["res_out"]), greedy=True, data_store=CSVDataStore
+        )
 
         mgr = BenchmarkManager(
             data_source=SimpleMockDataSource(3),

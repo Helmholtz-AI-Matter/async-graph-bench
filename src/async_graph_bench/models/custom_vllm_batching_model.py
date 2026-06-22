@@ -1,12 +1,13 @@
 import os
 from typing import List
-import asyncio
 from . import Model, GenerationParameters
 
 try:
     from openai import AsyncOpenAI
 except ImportError as e:
-    raise ImportError("To use this functionality, you need to install the 'openai' module") from e
+    raise ImportError(
+        "To use this functionality, you need to install the 'openai' module"
+    ) from e
 
 import logging
 
@@ -26,7 +27,9 @@ class OpenAIAPIResponseWrapper:
     def check_logprobs(self) -> bool:
         if self.has_logprobs is None:
             self.has_logprobs = all(
-                hasattr(data.choices[0], 'logprobs') and bool(data.choices[0].logprobs) for data in self.responses)
+                hasattr(data.choices[0], "logprobs") and bool(data.choices[0].logprobs)
+                for data in self.responses
+            )
         return self.has_logprobs
 
     def append_response(self, response):
@@ -34,60 +37,103 @@ class OpenAIAPIResponseWrapper:
         self.has_logprobs = None
 
     def get_messages(self) -> List[str]:
-        return [choice.message.content for response in self.responses for choice in response.choices]
+        return [
+            choice.message.content
+            for response in self.responses
+            for choice in response.choices
+        ]
 
     def get_token_lengths(self) -> List[List[int]]:
-        assert self.check_logprobs(), f"No logprobs present in the responses, please check the generation parameters"
-        return [[len(c.token) for c in choice.logprobs.content] for response in self.responses for choice in
-                response.choices]
+        assert self.check_logprobs(), (
+            "No logprobs present in the responses, please check the generation parameters"
+        )
+        return [
+            [len(c.token) for c in choice.logprobs.content]
+            for response in self.responses
+            for choice in response.choices
+        ]
 
     def get_tokens(self) -> List[List[str]]:
-        assert self.check_logprobs(), f"No logprobs present in the responses, please check the generation parameters"
-        return [[decode_whitespace(c.token) for c in choice.logprobs.content] for response in self.responses for choice
-                in
-                response.choices]
+        assert self.check_logprobs(), (
+            "No logprobs present in the responses, please check the generation parameters"
+        )
+        return [
+            [decode_whitespace(c.token) for c in choice.logprobs.content]
+            for response in self.responses
+            for choice in response.choices
+        ]
 
     def get_logprobs(self) -> list[list[float]]:
-        assert self.check_logprobs(), f"No logprobs present in the responses, please check the generation parameters"
-        return [[c.logprob for c in choice.logprobs.content] for response in self.responses for choice in
-                response.choices]
+        assert self.check_logprobs(), (
+            "No logprobs present in the responses, please check the generation parameters"
+        )
+        return [
+            [c.logprob for c in choice.logprobs.content]
+            for response in self.responses
+            for choice in response.choices
+        ]
 
     def get_top_logprobs(self) -> list[list[dict]]:
-        assert self.check_logprobs(), f"No logprobs present in the responses, please check the generation parameters"
+        assert self.check_logprobs(), (
+            "No logprobs present in the responses, please check the generation parameters"
+        )
         return [
-            [{decode_whitespace(t.token): t.logprob for t in content.top_logprobs} for content in
-             choice.logprobs.content] \
-            for response in self.responses for choice in response.choices
+            [
+                {decode_whitespace(t.token): t.logprob for t in content.top_logprobs}
+                for content in choice.logprobs.content
+            ]
+            for response in self.responses
+            for choice in response.choices
         ]
 
     def get_tokens_alternatives(self) -> list[list[list]]:
-        assert self.check_logprobs(), f"No logprobs present in the responses, please check the generation parameters"
+        assert self.check_logprobs(), (
+            "No logprobs present in the responses, please check the generation parameters"
+        )
         return [
-            [[[decode_whitespace(t.token), t.logprob] for t in content.top_logprobs[:self.n_logprobs]] for content in
-             choice.logprobs.content] \
-            for response in self.responses for choice in response.choices
+            [
+                [
+                    [decode_whitespace(t.token), t.logprob]
+                    for t in content.top_logprobs[: self.n_logprobs]
+                ]
+                for content in choice.logprobs.content
+            ]
+            for response in self.responses
+            for choice in response.choices
         ]
 
     def get_greedy_log_probs(self):
-        assert self.check_logprobs(), f"No logprobs present in the responses, please check the generation parameters"
+        assert self.check_logprobs(), (
+            "No logprobs present in the responses, please check the generation parameters"
+        )
         return [
-            [[alternative.logprob for alternative in token.top_logprobs[:self.n_logprobs]] for token in
-             choice.logprobs.content] \
-            for response in self.responses for choice in response.choices
+            [
+                [
+                    alternative.logprob
+                    for alternative in token.top_logprobs[: self.n_logprobs]
+                ]
+                for token in choice.logprobs.content
+            ]
+            for response in self.responses
+            for choice in response.choices
         ]
 
     def get_finish_reasons(self) -> list[list[float]]:
-        return [choice.finish_reason for response in self.responses for choice in response.choices]
+        return [
+            choice.finish_reason
+            for response in self.responses
+            for choice in response.choices
+        ]
 
 
 class CustomVLLMBatchingModel(Model):
     def __init__(
-            self,
-            model_id: str,
-            openai_api_key: str = None,
-            openai_endpoint: str = None,
-            limit_logprobs: bool = False,
-            use_chat=True
+        self,
+        model_id: str,
+        openai_api_key: str = None,
+        openai_endpoint: str = None,
+        limit_logprobs: bool = False,
+        use_chat=True,
     ):
         """
         Parameters:
@@ -110,21 +156,26 @@ class CustomVLLMBatchingModel(Model):
             self._create = self.openai_api.completions.create
             self._payload_kw = "prompt"
 
-    async def query(self, prompt, generation_params: GenerationParameters) -> OpenAIAPIResponseWrapper:
+    async def query(
+        self, prompt, generation_params: GenerationParameters
+    ) -> OpenAIAPIResponseWrapper:
         wrapper = OpenAIAPIResponseWrapper(
-            n_logprobs=generation_params.logprobs if self.limit_logprobs and hasattr(generation_params,
-                                                                                     'logprobs') else None)
+            n_logprobs=generation_params.logprobs
+            if self.limit_logprobs and hasattr(generation_params, "logprobs")
+            else None
+        )
         params = generation_params.to_dict()
-        if 'logprobs' in params:  # logprobs is numeric in GenerationParameters
-            if params['logprobs'] != 0:
-                params['top_logprobs'] = min(params['logprobs'], 20)
-            params['logprobs'] = bool(params['logprobs'])
+        if "logprobs" in params:  # logprobs is numeric in GenerationParameters
+            if params["logprobs"] != 0:
+                params["top_logprobs"] = min(params["logprobs"], 20)
+            params["logprobs"] = bool(params["logprobs"])
 
         if isinstance(prompt, list):
             if all(isinstance(p, str) for p in prompt):
                 prompt = [[{"role": "user", "content": p}] for p in prompt]
         elif isinstance(prompt, str) or (  # single message
-                isinstance(prompt, list) and all(isinstance(item, dict) for item in prompt)):  # single message
+            isinstance(prompt, list) and all(isinstance(item, dict) for item in prompt)
+        ):  # single message
             # If prompt is a string, create a single message with "user" role
             if isinstance(prompt, str):
                 prompt = [{"role": "user", "content": prompt}]
@@ -134,8 +185,7 @@ class CustomVLLMBatchingModel(Model):
         params[self._payload_kw] = prompt
 
         response = await self.openai_api.chat.completions.create(
-            model=self.model_id,
-            **params
+            model=self.model_id, **params
         )
         wrapper.append_response(response)
         return wrapper

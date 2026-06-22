@@ -259,4 +259,5 @@ class TestBenchmarkManagerCSVOutput:
         csv_path = str(tmp_path / "report.csv")
         report.write_csv_to_file(csv_path)
         import os
+
         assert os.path.exists(csv_path)

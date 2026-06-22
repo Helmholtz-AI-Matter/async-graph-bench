@@ -1,9 +1,8 @@
 import pytest
-import asyncio
-from typing import List, Dict, Any
-from async_graph_bench.execution_nodes.node_execution_wrapper import NodeExecutionWrapper
+from async_graph_bench.execution_nodes.node_execution_wrapper import (
+    NodeExecutionWrapper,
+)
 from async_graph_bench.utils.end_of_data import EndOfData
-from async_graph_bench import NodeConfig
 from tests.fixtures import MockNode
 
 
@@ -40,7 +39,9 @@ class TestNodeExecutionWrapperIntermediate:
 
     @pytest.mark.asyncio
     async def test_eyecall_async_call(self):
-        async_node = MockNode(requires=["val"], provides=["out"], async_call=True, multiply=2)
+        async_node = MockNode(
+            requires=["val"], provides=["out"], async_call=True, multiply=2
+        )
         wrapper = NodeExecutionWrapper(async_node)
 
         collected = []

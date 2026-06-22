@@ -21,7 +21,9 @@ class ResourceHandle:
 
     async def __aenter__(self):
         # Return single item for convenience, or tuple/list for multiple.
-        return self._resources[0] if len(self._resources) == 1 else tuple(self._resources)
+        return (
+            self._resources[0] if len(self._resources) == 1 else tuple(self._resources)
+        )
 
     async def __aexit__(self, exc_type, exc, tb):
         await self.release()
@@ -45,7 +47,7 @@ class ResourcePool:
 
     def __init__(self, resources: Iterable[Any], stack_mode: bool = False):
         resources = list(resources)
-        self._resources = resources                # NEW: raw storage
+        self._resources = resources  # NEW: raw storage
         self._stack_mode = stack_mode
         self._total = len(resources)
 
@@ -53,8 +55,8 @@ class ResourcePool:
         self._resource_ids = {id(r): i for i, r in enumerate(resources)}
         self._use_counts = {i: 0 for i in range(self._total)}
 
-        self._queue = None                         # NEW: lazy initialization
-        self._loop = None                          # NEW: event loop tracking
+        self._queue = None  # NEW: lazy initialization
+        self._loop = None  # NEW: event loop tracking
 
         self._on_close: List[ResourceCloseFunc] = []
 
@@ -90,7 +92,7 @@ class ResourcePool:
         if n <= 0:
             raise ValueError("n must be >= 1")
 
-        self._ensure_queue()       # <---- IMPORTANT
+        self._ensure_queue()  # <---- IMPORTANT
 
         async def _get_one():
             res = await self._queue.get()
@@ -171,7 +173,9 @@ class MultiResourceHandle:
     def __init__(self, ordered_handles: List[Tuple[int, ResourceHandle]]):
         # ordered_handles: list of (index_in_request, ResourceHandle)
         # sort to original requested order
-        self._ordered_handles = [h for idx, h in sorted(ordered_handles, key=lambda t: t[0])]
+        self._ordered_handles = [
+            h for idx, h in sorted(ordered_handles, key=lambda t: t[0])
+        ]
 
     async def __aenter__(self):
         results = []
@@ -190,9 +194,9 @@ class MultiResourceHandle:
 
 
 async def acquire_from_many(
-        pools: List[ResourcePool],
-        counts: Optional[List[int]] = None,
-        timeout: Optional[float] = None
+    pools: List[ResourcePool],
+    counts: Optional[List[int]] = None,
+    timeout: Optional[float] = None,
 ) -> MultiResourceHandle:
     """
     Acquire resources from multiple pools. To avoid deadlocks, this helper

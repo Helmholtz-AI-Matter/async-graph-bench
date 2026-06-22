@@ -49,8 +49,13 @@ class AsyncMockDataSource(DataSource):
 class MockNode:
     """A node implementing the Node protocol for testing."""
 
-    def __init__(self, requires: List[str], provides: List[str] | None = None,
-                 async_call: bool = False, multiply: float = 1.0):
+    def __init__(
+        self,
+        requires: List[str],
+        provides: List[str] | None = None,
+        async_call: bool = False,
+        multiply: float = 1.0,
+    ):
         self.requires = requires
         if provides is not None:
             self.provides = provides
@@ -60,7 +65,7 @@ class MockNode:
 
     def __call__(self, item_stats: Dict[str, list], **kwargs) -> Dict[str, list] | Any:
         self.call_count += 1
-        if hasattr(self, 'provides'):
+        if hasattr(self, "provides"):
             first_input = item_stats[self.requires[0]]
             return {self.provides[0]: [v * self._multiply for v in first_input]}
         first_input = item_stats[self.requires[0]]

@@ -1,4 +1,3 @@
-import pytest
 from async_graph_bench.models.reasoning_parsers import (
     parse_gpt_oss_reasoning,
     parse_reasoning,
@@ -67,27 +66,47 @@ class TestParseGptOssReasoning:
 
     def test_reasoning_and_message(self):
         tokens = [
-            "<|channel|>", "thinking",
-            "<|message|>", "thinking text", "<|end|>",
-            "<|channel|>", "final",
-            "<|message|>", "answer text", "<|end|>",
+            "<|channel|>",
+            "thinking",
+            "<|message|>",
+            "thinking text",
+            "<|end|>",
+            "<|channel|>",
+            "final",
+            "<|message|>",
+            "answer text",
+            "<|end|>",
         ]
         result = parse_gpt_oss_reasoning(tokens)
         assert len(result["reasoning"]) == 1
         assert result["message"] is not None
 
     def test_leading_orphan_tokens(self):
-        tokens = ["orphan", "data", "<|channel|>", "analysis", "<|message|>", "t", "<|end|>"]
+        tokens = [
+            "orphan",
+            "data",
+            "<|channel|>",
+            "analysis",
+            "<|message|>",
+            "t",
+            "<|end|>",
+        ]
         result = parse_gpt_oss_reasoning(tokens)
         assert len(result["reasoning"]) >= 1
         assert result["reasoning"][0][2] == "analysis"
 
     def test_multiple_reasoning_channels(self):
         tokens = [
-            "<|channel|>", "analysis",
-            "<|message|>", "a1", "<|end|>",
-            "<|channel|>", "planning",
-            "<|message|>", "p1", "<|end|>",
+            "<|channel|>",
+            "analysis",
+            "<|message|>",
+            "a1",
+            "<|end|>",
+            "<|channel|>",
+            "planning",
+            "<|message|>",
+            "p1",
+            "<|end|>",
         ]
         result = parse_gpt_oss_reasoning(tokens)
         assert len(result["reasoning"]) == 2

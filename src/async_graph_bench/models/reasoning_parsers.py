@@ -30,12 +30,20 @@ def parse_gpt_oss_reasoning(tokens):
     # ------------------------------------------------------------
     i = 0
     if tokens and tokens[0] not in (
-        "<|channel|>", "<|message|>", "<|end|>", "<|return|>", "<|start|>"
+        "<|channel|>",
+        "<|message|>",
+        "<|end|>",
+        "<|return|>",
+        "<|start|>",
     ):
         # Scan until the first structural tag
         start = 0
         while i < len(tokens) and tokens[i] not in (
-            "<|channel|>", "<|message|>", "<|end|>", "<|return|>", "<|start|>"
+            "<|channel|>",
+            "<|message|>",
+            "<|end|>",
+            "<|return|>",
+            "<|start|>",
         ):
             i += 1
 
@@ -67,7 +75,7 @@ def find_subarray(tokens, sub, start=0):
     """Find the first index of subarray `sub` in `tokens` starting at `start`."""
     n = len(sub)
     for i in range(start, len(tokens) - n + 1):
-        if tokens[i:i + n] == sub:
+        if tokens[i : i + n] == sub:
             return i
     return -1
 
@@ -103,7 +111,7 @@ def find_subarray_backwards(tokens, sub, start=0, end=None):
 
     # iterate backwards starting from the latest possible start index inside [start, end)
     for i in range(end - n, start - 1, -1):
-        if tokens[i:i + n] == sub:
+        if tokens[i : i + n] == sub:
             return i
     return -1
 
@@ -156,6 +164,6 @@ parse_mistral_reasoning = partial(
 
 parse_qwen_reasoning = partial(
     parse_reasoning,
-    start_pattern=["<think>"],                 # no start tag
-    end_pattern=["</think>"],         # Qwen end tag
+    start_pattern=["<think>"],  # no start tag
+    end_pattern=["</think>"],  # Qwen end tag
 )

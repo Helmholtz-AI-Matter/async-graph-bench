@@ -1,19 +1,14 @@
+import asyncio
 import logging
 import os
 import signal
 import time
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
-log = logging.getLogger(__name__)
-
-# vllm_pool.py (or your module that contains start_workers)
-import asyncio
-import logging
-from typing import Any, Dict, List, Optional, Callable
 import aioprocessing
 
 from .vllm_worker import _worker_main
-from ..worker_client import WorkerClient  # updated below
+from ..worker_client import WorkerClient
 
 log = logging.getLogger(__name__)
 
@@ -22,13 +17,17 @@ def chunk_gpus(gpus: List[int], gpus_per_worker: int) -> List[List[int]]:
     chunks = []
     for i in range(0, len(gpus), gpus_per_worker):
         if i + gpus_per_worker <= len(gpus):
-            chunks.append(gpus[i:i + gpus_per_worker])
+            chunks.append(gpus[i : i + gpus_per_worker])
     return chunks
 
 
-async def start_workers(model_name: str, gpus_per_worker: int, llm_kwargs: Optional[Dict[str, Any]] = None,
-                        gpus: Optional[List[Optional[int]]] = None, log_level=logging.INFO) -> Tuple[
-    List[WorkerClient], Callable]:
+async def start_workers(
+    model_name: str,
+    gpus_per_worker: int,
+    llm_kwargs: Optional[Dict[str, Any]] = None,
+    gpus: Optional[List[Optional[int]]] = None,
+    log_level=logging.INFO,
+) -> Tuple[List[WorkerClient], Callable]:
     """
     Start several subprocesses running vLLM instances.
 
@@ -89,8 +88,15 @@ async def start_workers(model_name: str, gpus_per_worker: int, llm_kwargs: Optio
         gpu_ids = gpu_chunks[i]
         proc = aioprocessing.AioProcess(
             target=_worker_main,
-            args=(init_q, request_q, response_q, model_name, llm_kwargs or {}, gpu_ids,
-                  log_level if i == 0 else logging.CRITICAL)
+            args=(
+                init_q,
+                request_q,
+                response_q,
+                model_name,
+                llm_kwargs or {},
+                gpu_ids,
+                log_level if i == 0 else logging.CRITICAL,
+            ),
         )
         processes.append(proc)
         proc.start()
@@ -111,7 +117,9 @@ async def start_workers(model_name: str, gpus_per_worker: int, llm_kwargs: Optio
                 t.cancel()
         shutdown()
         await asyncio.gather(*(w.stop() for w in workers), return_exceptions=True)
-        raise RuntimeError("Failed to receive initialization messages from workers") from e
+        raise RuntimeError(
+            "Failed to receive initialization messages from workers"
+        ) from e
 
     # inspect init results
     init_errors = []
@@ -125,11 +133,17 @@ async def start_workers(model_name: str, gpus_per_worker: int, llm_kwargs: Optio
         try:
             shutdown()
             # await asyncio.gather(*(w.stop() for w in workers), return_exceptions=True)
-        except Exception:  # stopping the workers will again create an exception, ignore this one
+        except (
+            Exception
+        ):  # stopping the workers will again create an exception, ignore this one
             pass
 
         traceback = "\n\n".join(
-            [f"Error {idx} in Process {err['pid']} - Traceback: {err['traceback']}" for idx, err in init_errors])
+            [
+                f"Error {idx} in Process {err['pid']} - Traceback: {err['traceback']}"
+                for idx, err in init_errors
+            ]
+        )
         raise RuntimeError(f"One or more workers failed to initialize:\n{traceback}")
     end_time = time.time()
     elapsed = time.strftime("%Hh %Mm %Ss", time.gmtime(end_time - start_time))

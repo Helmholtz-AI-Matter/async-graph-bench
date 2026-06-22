@@ -1,4 +1,3 @@
-import pytest
 from async_graph_bench import NodeConfig, CSVDataStore
 from async_graph_bench.acyclic_directed_graph import AcyclicDirectedGraph
 from tests.fixtures import MockNode, SimpleMockDataSource

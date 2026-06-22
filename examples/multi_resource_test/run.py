@@ -14,18 +14,28 @@ from dummy_datasource import DummyDataSource
 from query_model import QueryModel
 
 load_dotenv()
-for prefix in ['OPENAI', 'BLABLADOR', 'SCADS']:
-    print(f"{prefix}_BASE_URL=", os.environ.get(f"{prefix}_BASE_URL", None))  # They need to be set, throw otherwise
-    api_key = os.environ.get(f"{prefix}_API_KEY", None)  # They need to be set, throw otherwise
-    print(f"{prefix}_API_KEY=", (api_key[:3] + '*' * (len(api_key) - 3) if api_key else None))
+for prefix in ["OPENAI", "BLABLADOR", "SCADS"]:
+    print(
+        f"{prefix}_BASE_URL=", os.environ.get(f"{prefix}_BASE_URL", None)
+    )  # They need to be set, throw otherwise
+    api_key = os.environ.get(
+        f"{prefix}_API_KEY", None
+    )  # They need to be set, throw otherwise
+    print(
+        f"{prefix}_API_KEY=",
+        (api_key[:3] + "*" * (len(api_key) - 3) if api_key else None),
+    )
 
 NodeConfig.base_config = {"queue_size": 100, "prop_name": "estimations"}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Select model type.")
-    parser.add_argument("--models",
-                        choices=['one', 'two', 'both'], required=True,
-                        help="Choose between 'one', 'two', 'both'")
+    parser.add_argument(
+        "--models",
+        choices=["one", "two", "both"],
+        required=True,
+        help="Choose between 'one', 'two', 'both'",
+    )
 
     args = parser.parse_args()
 
@@ -37,23 +47,25 @@ if __name__ == "__main__":
     result_path = f"data/{args.models}"
     os.makedirs(result_path, exist_ok=True)
 
-
     def build_resources(env):
         models = []
-        if args.models == 'one' or args.models == 'both':
-            models.append(OpenAIAPIModel(
-                model_path="10 - DeepSeek-R1-Distill-Llama-8B - the best fast model as of January 2025",
-                openai_endpoint=os.environ.get(f"BLABLADOR_BASE_URL"),
-                openai_api_key=os.environ.get(f"BLABLADOR_API_KEY")
-            ))
-        if args.models == 'two' or args.models == 'both':
-            models.append(OpenAIAPIModel(
-                model_path="deepseek-ai/DeepSeek-R1",
-                openai_endpoint=os.environ.get(f"SCADS_BASE_URL"),
-                openai_api_key=os.environ.get(f"SCADS_API_KEY")
-            ))
+        if args.models == "one" or args.models == "both":
+            models.append(
+                OpenAIAPIModel(
+                    model_path="10 - DeepSeek-R1-Distill-Llama-8B - the best fast model as of January 2025",
+                    openai_endpoint=os.environ.get("BLABLADOR_BASE_URL"),
+                    openai_api_key=os.environ.get("BLABLADOR_API_KEY"),
+                )
+            )
+        if args.models == "two" or args.models == "both":
+            models.append(
+                OpenAIAPIModel(
+                    model_path="deepseek-ai/DeepSeek-R1",
+                    openai_endpoint=os.environ.get("SCADS_BASE_URL"),
+                    openai_api_key=os.environ.get("SCADS_API_KEY"),
+                )
+            )
         return models
-
 
     available_stat_calculators = [
         NodeConfig(
@@ -72,7 +84,7 @@ if __name__ == "__main__":
         # consumers=[LabelProbExtractor()],  # TODO
         verbose=False,
         data_storage_path=result_path,
-        show_progress_bars=True
+        show_progress_bars=True,
     )
     if man.adg:
         visualize_graph(man.adg, to_pdf=False)
@@ -83,7 +95,7 @@ if __name__ == "__main__":
     print("Benchmarking finished!")
     exceptions = [item for sublist in result["exceptions"].values() for item in sublist]
     if exceptions:
-        message = 'Exceptions happened:' + str(exceptions)
+        message = "Exceptions happened:" + str(exceptions)
         print(message)
 
     del man

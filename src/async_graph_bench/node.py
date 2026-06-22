@@ -8,9 +8,8 @@ class Node(Protocol):
     description: Optional[str]
     spread: Optional[bool]
 
-    def __call__(self, item_stats: Dict[str, List[Any]], **kwargs: Any) -> Union[
-        Dict[str, List[Any]],
-        Any,
-        Awaitable[Union[Dict[str, List[Any]], Any]]
-    ]:
-        ...
+    def __call__(
+        self, item_stats: Dict[str, List[Any]], **kwargs: Any
+    ) -> Union[
+        Dict[str, List[Any]], Any, Awaitable[Union[Dict[str, List[Any]], Any]]
+    ]: ...

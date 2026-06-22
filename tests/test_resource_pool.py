@@ -2,8 +2,6 @@ import pytest
 import asyncio
 from async_graph_bench.utils.resource_pool import (
     ResourcePool,
-    ResourceHandle,
-    MultiResourceHandle,
     acquire_from_many,
 )
 
@@ -164,6 +162,7 @@ class TestAcquireFromMany:
     @pytest.mark.asyncio
     async def test_concurrent_acquire_release(self):
         pool = ResourcePool([1, 2, 3])
+
         async def worker():
             async with await pool.acquire(1):
                 await asyncio.sleep(0.02)

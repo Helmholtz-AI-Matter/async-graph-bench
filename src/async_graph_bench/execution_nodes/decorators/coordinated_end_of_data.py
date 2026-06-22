@@ -1,5 +1,4 @@
 import asyncio
-from functools import wraps
 
 from ...utils.end_of_data import EndOfData
 

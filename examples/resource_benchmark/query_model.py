@@ -25,12 +25,12 @@ class QueryModel:
         """
         self.max_tokens = max_tokens
         self.generation_params = GenerationParameters(
-            max_tokens=self.max_tokens,
-            logprobs=True,
-            temperature=1.0
+            max_tokens=self.max_tokens, logprobs=True, temperature=1.0
         )
 
-    async def __call__(self, item_stats: Dict[str, List], model: Model) -> Dict[str, List]:
+    async def __call__(
+        self, item_stats: Dict[str, List], model: Model
+    ) -> Dict[str, List]:
         """
         Generate responses from the LLM for the given input texts.
 
@@ -51,17 +51,19 @@ class QueryModel:
                 {
                     "role": "user",
                     "content": (
-                            "Please provide your best answer to the following question. "
-                            "I do know it requires a lengthy response, but try to get as much into it as possible.\n"
-                            + prompt
-                    )
+                        "Please provide your best answer to the following question. "
+                        "I do know it requires a lengthy response, but try to get as much into it as possible.\n"
+                        + prompt
+                    ),
                 }
             ]
             for prompt in input_texts
         ]
 
         # Query the model
-        response_wrapper = await model.query(messages, generation_params=self.generation_params)
+        response_wrapper = await model.query(
+            messages, generation_params=self.generation_params
+        )
         responses = response_wrapper.get_messages()
         token_lengths = [len(t) for t in response_wrapper.get_tokens()]
 

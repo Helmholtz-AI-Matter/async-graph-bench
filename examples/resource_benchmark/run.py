@@ -11,23 +11,29 @@ from async_graph_bench.utils.visualize_graph import visualize_graph
 from builders import Endpoint, get_openai_api_builder, get_vllm_builder, get_vllm_multi_instance_builder
 from prompt_datasource import PromptDataSource
 from query_model import QueryModel
-
-load_dotenv()
-
-print("===== ENV =====")
-for i in [1, 2]:
-    prefix = f"OPENAI_API_ENDPOINT_{i}"
-    base_url = os.environ.get(f"{prefix}_BASE_URL")
-    api_key = os.environ.get(f"{prefix}_API_KEY")
-    model = os.environ.get(f"{prefix}_MODEL")
-    print(f"{prefix}_BASE_URL =", base_url)
-    print(f"{prefix}_API_KEY =", (api_key[:3] + '*' * (len(api_key) - 3) if api_key else None))
-    print(f"{prefix}_MODEL =", model)
-print("\n\n")
+from pathlib import Path
+from typing import Tuple
 
 NodeConfig.base_config = {"queue_size": 100, "prop_name": "estimations"}
 
-def main(argv):
+def uncover_openai_credentials(dotenvpath: Path = Path(".env")) -> Tuple[str,str,str]:
+    load_dotenv(dotenvpath)
+
+    print("===== ENV =====")
+    for i in [1, 2]:
+        prefix = f"OPENAI_API_ENDPOINT_{i}"
+        base_url = os.environ.get(f"{prefix}_BASE_URL")
+        api_key = os.environ.get(f"{prefix}_API_KEY")
+        model = os.environ.get(f"{prefix}_MODEL")
+        print(f"{prefix}_BASE_URL =", base_url)
+        print(f"{prefix}_API_KEY =", (api_key[:3] + '*' * (len(api_key) - 3) if api_key else None))
+        print(f"{prefix}_MODEL =", model)
+        print("\n\n")
+
+    return base_url, api_key, model
+
+
+def main(argv) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Run a simple benchmark comparing LLM inference across different resource configurations. "
@@ -68,6 +74,12 @@ def main(argv):
         help="Number of prompts processed per batch during the benchmark (default: 50)."
     )
     parser.add_argument(
+        "--dotenvpath",
+        type=Path,
+        default=".env",
+        help="path to dotenv file to uncover the OPENAI_API_ENDPOINT and OPENAI_API_KEY"
+    )
+    parser.add_argument(
         "--iterations",
         type=int,
         default=2,
@@ -81,6 +93,9 @@ def main(argv):
 
     args = parser.parse_args(argv)
     data_source = PromptDataSource()
+
+    # uncover openai API credentials
+    base_url, api_key, model = uncover_openai_credentials(args.dotenvpath)
 
     # prepare list of models
     models = []

@@ -3,7 +3,6 @@ import argparse
 import pickle
 import traceback
 import gc
-import sys
 from typing import Any, Dict, List
 from fastapi import FastAPI, Request, Response, HTTPException
 
@@ -16,6 +15,7 @@ llm = None
 is_initialized = False
 
 app = FastAPI()
+
 
 def unknown_args_to_dict(unknown_args):
     """
@@ -32,17 +32,17 @@ def unknown_args_to_dict(unknown_args):
     i = 0
     while i < len(unknown_args):
         arg = unknown_args[i]
-        if arg.startswith('--'):
-            key = arg[2:].replace('-', '_')
-            if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith('--'):
+        if arg.startswith("--"):
+            key = arg[2:].replace("-", "_")
+            if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith("--"):
                 # Try to parse as int
                 try:
                     value = int(unknown_args[i + 1])
                 except ValueError:
                     # Try to parse as bool (if 'true' or 'false', case-insensitive)
                     val_lower = unknown_args[i + 1].lower()
-                    if val_lower in ('true', 'false'):
-                        value = val_lower == 'true'
+                    if val_lower in ("true", "false"):
+                        value = val_lower == "true"
                     else:
                         value = unknown_args[i + 1]
                 result[key] = value
@@ -54,7 +54,6 @@ def unknown_args_to_dict(unknown_args):
         else:
             i += 1
     return result
-
 
 
 def normalize_chat_input(user_input: Any) -> List[List[Dict[str, Any]]]:
@@ -83,6 +82,7 @@ def client_is_local(request: Request) -> bool:
 async def startup_event():
     global llm, is_initialized
     from vllm import LLM
+
     if DEBUG:
         print(f"[DEBUG] Initializing LLM: {MODEL_NAME}, kwargs={LLM_KWARGS}")
     llm = LLM(model=MODEL_NAME, **LLM_KWARGS)
@@ -101,6 +101,7 @@ def shutdown_event():
         pass
     try:
         import torch
+
         gc.collect()
         torch.cuda.empty_cache()
     except Exception:
@@ -118,15 +119,22 @@ async def chat_endpoint(request: Request):
         messages_raw, sampling_kwargs = pickle.loads(body)
         prompts = normalize_chat_input(messages_raw)
         from vllm import SamplingParams
+
         sp = SamplingParams(**sampling_kwargs) if sampling_kwargs else None
         outputs = llm.chat(prompts, sp, use_tqdm=False)
-        return Response(content=pickle.dumps(outputs),
-                        media_type="application/octet-stream")
+        return Response(
+            content=pickle.dumps(outputs), media_type="application/octet-stream"
+        )
     except Exception as e:
         if DEBUG:
             tb = traceback.format_exc()
-            return Response(content=pickle.dumps({"status": "error", "error": str(e), "traceback": tb}),
-                            media_type="application/octet-stream", status_code=500)
+            return Response(
+                content=pickle.dumps(
+                    {"status": "error", "error": str(e), "traceback": tb}
+                ),
+                media_type="application/octet-stream",
+                status_code=500,
+            )
         raise HTTPException(status_code=500, detail="Chat failed")
 
 
@@ -142,22 +150,32 @@ async def generate_endpoint(request: Request):
         if not (isinstance(prompts, list) and all(isinstance(p, str) for p in prompts)):
             raise ValueError("prompts must be str or list[str]")
         from vllm import SamplingParams
+
         sp = SamplingParams(**sampling_kwargs) if sampling_kwargs else None
         outputs = llm.generate(prompts, sp, use_tqdm=False)
-        return Response(content=pickle.dumps({"status": "ok", "outputs": outputs}),
-                        media_type="application/octet-stream")
+        return Response(
+            content=pickle.dumps({"status": "ok", "outputs": outputs}),
+            media_type="application/octet-stream",
+        )
     except Exception as e:
         if DEBUG:
             tb = traceback.format_exc()
-            return Response(content=pickle.dumps({"status": "error", "error": str(e), "traceback": tb}),
-                            media_type="application/octet-stream", status_code=500)
+            return Response(
+                content=pickle.dumps(
+                    {"status": "error", "error": str(e), "traceback": tb}
+                ),
+                media_type="application/octet-stream",
+                status_code=500,
+            )
         raise HTTPException(status_code=500, detail="Generate failed")
+
 
 @app.get("/health")
 async def health_endpoint():
-    if is_initialized == False:
+    if not is_initialized:
         raise HTTPException(status_code=503, detail="LLM not initialized")
     return {"status": "ok", "model": MODEL_NAME}
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -168,12 +186,12 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
     unknown_dict = unknown_args_to_dict(unknown)
 
-    import json
     MODEL_NAME = args.model
     PORT = args.port
     ALLOW_REMOTE = args.allow_remote
     LLM_KWARGS = unknown_dict
 
     import uvicorn
+
     host = "0.0.0.0" if ALLOW_REMOTE else "127.0.0.1"
     uvicorn.run(app, host=host, port=PORT)

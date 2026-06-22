@@ -1,5 +1,5 @@
 import pytest
-from async_graph_bench import DataSource, DataSourcePartitioner
+from async_graph_bench import DataSourcePartitioner
 from tests.fixtures import SimpleMockDataSource, AsyncMockDataSource
 
 

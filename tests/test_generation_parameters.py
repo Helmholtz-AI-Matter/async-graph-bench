@@ -1,4 +1,3 @@
-import pytest
 from async_graph_bench import GenerationParameters
 
 

@@ -54,3 +54,16 @@ You can find examples for different benchmarking applications in `examples/`.
 ## Documentation
 
 The documentation is mainted in `docs/`. These are sphinx-generated pages. We are currently working to host as webpages. In the meantime, please see `docs/README.md` for details on how to build them locally.
+
+## Development
+
+Install dev dependencies with `pip install -e ".[dev]"`.
+
+**Run CI Checks Locally**
+
+| Check | Command |
+|---|---|
+| Run unit tests | `pytest` |
+| Lint code | `ruff check` |
+| Auto-fix lint issues | `ruff check --fix` |
+| Format code | `ruff format` |

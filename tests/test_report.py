@@ -1,4 +1,3 @@
-import pytest
 from async_graph_bench import (
     BenchmarkManager,
     NodeConfig,
@@ -130,6 +129,7 @@ class TestBenchmarkReportCSVFile:
         csv_path = str(tmp_path / "results.csv")
         report.write_csv_to_file(csv_path)
         import csv
+
         with open(csv_path, newline="") as f:
             reader = csv.reader(f)
             rows = list(reader)
@@ -160,6 +160,7 @@ class TestBenchmarkReportCSVFile:
             report.write_csv_to_file(csv_path)
 
         import csv
+
         with open(csv_path, newline="") as f:
             reader = csv.reader(f)
             rows = list(reader)

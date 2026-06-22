@@ -10,7 +10,7 @@ questions = [
     "Provide a detailed literary analysis of every major work of Shakespeare, including summaries, character breakdowns, themes, historical context, and interpretations of its lasting influence on modern literature and culture.",
     "Explain the entire history and development of computing and technology, covering every milestone from ancient computational tools to the modern era of quantum computing and artificial intelligence, including the people, companies, and societal impacts involved.",
     "For each country in the world, provide an in-depth account of its history, political system, geography, economy, demographics, culture, traditions, major challenges, and contributions to the global community.",
-    "Explain the complete biology and ecology of coral reefs, detailing every species that relies on this ecosystem, the processes that sustain it, the threats it faces, and the efforts being made to preserve it."
+    "Explain the complete biology and ecology of coral reefs, detailing every species that relies on this ecosystem, the processes that sustain it, the threats it faces, and the efforts being made to preserve it.",
 ]
 
 

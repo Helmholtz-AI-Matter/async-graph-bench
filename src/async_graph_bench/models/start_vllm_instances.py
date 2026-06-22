@@ -34,7 +34,9 @@ def _model_params_to_cli_args(model_params: Dict[str, Any]) -> List[str]:
     return args
 
 
-async def poll_url_until_available(url: str, interval: float = 0.5, timeout: float = 60.0) -> None:
+async def poll_url_until_available(
+    url: str, interval: float = 0.5, timeout: float = 60.0
+) -> None:
     """Poll a URL until it returns 200 OK or timeout expires."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -79,18 +81,20 @@ async def _pipe_to_console(stream: asyncio.StreamReader, prefix: str):
         if not line:
             break
         print(f"[{prefix}] {line.decode(errors='replace').rstrip()}")
+
+
 # ===============================================================
 
 
 async def start_vllm_instances(
-        available_gpus: List[int],
-        gpus_per_model: int,
-        model: str,
-        model_params: Dict[str, Any],
-        vllm_executable: str = "vllm",
-        poll_interval: float = 2,
-        poll_timeout: float = 300,
-        host: str = "127.0.0.1",
+    available_gpus: List[int],
+    gpus_per_model: int,
+    model: str,
+    model_params: Dict[str, Any],
+    vllm_executable: str = "vllm",
+    poll_interval: float = 2,
+    poll_timeout: float = 300,
+    host: str = "127.0.0.1",
 ) -> List[int]:
     """
     Start multiple vllm serve instances, each bound to a chunk of GPUs,
@@ -103,7 +107,7 @@ async def start_vllm_instances(
 
     num_instances = len(available_gpus) // gpus_per_model
     gpu_chunks = [
-        available_gpus[i * gpus_per_model: (i + 1) * gpus_per_model]
+        available_gpus[i * gpus_per_model : (i + 1) * gpus_per_model]
         for i in range(num_instances)
     ]
 
@@ -131,10 +135,9 @@ async def start_vllm_instances(
         asyncio.create_task(_pipe_to_console(proc.stderr, f"PORT {port} STDERR"))
         # =================================================================
 
-    watcher_tasks: List[asyncio.Task] = []
-
     # Launch watchers in background
     for port, proc, _ in processes:
+
         async def watch_process_exit(port=port, proc=proc):
             returncode = await proc.wait()
             print(f"Process {port} exited with returncode {returncode}")
@@ -146,17 +149,20 @@ async def start_vllm_instances(
                     f"STDOUT:\n{stdout.decode(errors='replace')}\n"
                     f"STDERR:\n{stderr.decode(errors='replace')}"
                 )
-        t = asyncio.create_task(watch_process_exit(port, proc))
-        # t.add_done_callback(_raise_on_exception)
+
+        asyncio.create_task(watch_process_exit(port, proc))
 
     # Only wait for readiness
     async with asyncio.TaskGroup() as tg:
         for port, proc, start_time in processes:
+
             async def wait_for_ready(port=port, start_time=start_time):
                 url = f"http://{host}:{port}/v1/models"
                 await poll_url_until_available(url, poll_interval, poll_timeout)
                 elapsed = time.monotonic() - start_time
-                print(f"[INFO] vllm serve process on port {port} ready in {elapsed:.2f}s")
+                print(
+                    f"[INFO] vllm serve process on port {port} ready in {elapsed:.2f}s"
+                )
 
             tg.create_task(wait_for_ready())
 
@@ -165,8 +171,9 @@ async def start_vllm_instances(
             if proc.returncode is None:  # still running
                 proc.kill()
             else:
-                print(f"[INFO] vllm serve process on port {port} was already closed before termination")
-
+                print(
+                    f"[INFO] vllm serve process on port {port} was already closed before termination"
+                )
 
         # for _, proc, _ in processes:
         #     if proc.returncode is None:  # still running

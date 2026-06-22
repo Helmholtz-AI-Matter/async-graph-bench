@@ -4,19 +4,32 @@ from collections import Counter
 
 from dotenv import load_dotenv
 
-from async_graph_bench import DataSource, NodeConfig, SamplingConfig, BenchmarkManager, visualize_graph, ResourcePool, \
-    JSONDataStore, Model
+from async_graph_bench import (
+    DataSource,
+    NodeConfig,
+    SamplingConfig,
+    BenchmarkManager,
+    visualize_graph,
+    ResourcePool,
+    JSONDataStore,
+    Model,
+)
 from async_graph_bench.models import GenerationParameters
 from async_graph_bench.models.openai_api_model import OpenAIAPIModel
 
 # Load environment variables for OpenAI API
 load_dotenv()
 print("===== ENV =====")
-print(f"OPENAI_API_ENDPOINT_BASE_URL=",
-      os.environ.get(f"OPENAI_API_ENDPOINT_BASE_URL", None))  # Ensure this is set
-api_key = os.environ.get(f"OPENAI_API_ENDPOINT_API_KEY", None)  # Ensure this is set
-print(f"OPENAI_API_ENDPOINT_API_KEY=", (api_key[:3] + '*' * (len(api_key) - 3) if api_key else None))
-print(f"OPENAI_API_ENDPOINT_MODEL=", os.environ.get(f"OPENAI_API_ENDPOINT_MODEL", None))
+print(
+    "OPENAI_API_ENDPOINT_BASE_URL=",
+    os.environ.get("OPENAI_API_ENDPOINT_BASE_URL", None),
+)  # Ensure this is set
+api_key = os.environ.get("OPENAI_API_ENDPOINT_API_KEY", None)  # Ensure this is set
+print(
+    "OPENAI_API_ENDPOINT_API_KEY=",
+    (api_key[:3] + "*" * (len(api_key) - 3) if api_key else None),
+)
+print("OPENAI_API_ENDPOINT_MODEL=", os.environ.get("OPENAI_API_ENDPOINT_MODEL", None))
 print("\n\n")
 
 # Regex patterns to parse model responses
@@ -41,7 +54,9 @@ def extract_from_numbered_list(response: str):
 
 # Prompts to instruct the model
 PROMPT_COMMA_SEPARATED = "Output {number_items} random integers between 1 and 100, comma-separated, without any additional text or introduction."
-PROMPT_NUMBERED_LIST = "Output {number_items} random integers between 1 and 100 in a numbered list."
+PROMPT_NUMBERED_LIST = (
+    "Output {number_items} random integers between 1 and 100 in a numbered list."
+)
 
 amount_items = 28
 
@@ -53,19 +68,20 @@ class PromptSource(DataSource):
     - Numbered list of integers
     Each item also provides the corresponding extractor function.
     """
+
     provides = ["number_items", "prompt", "extractor"]
     items = [
         {
             "id": ("comma_separated", amount_items),
             "number_items": amount_items,
             "prompt": PROMPT_COMMA_SEPARATED.format(number_items=amount_items),
-            "extractor": extract_comma_separated
+            "extractor": extract_comma_separated,
         },
         {
             "id": ("numbered_list", amount_items),
             "number_items": amount_items,
             "prompt": PROMPT_NUMBERED_LIST.format(number_items=amount_items),
-            "extractor": extract_from_numbered_list
+            "extractor": extract_from_numbered_list,
         },
     ]
 
@@ -86,6 +102,7 @@ class ResponseGenerator:
     Calls a language model to generate responses for a given prompt.
     Produces 'response' output for each input item.
     """
+
     requires = ["prompt"]
     provides = ["response"]
     description = "Generates a response for a prompt using an LLM"
@@ -104,16 +121,17 @@ class LengthExtractor:
     Extracts the number of items from the model's response using the provided extractor.
     Produces 'length' output.
     """
+
     requires = ["extractor", "response"]
     provides = ["length"]
     description = "Extracts the number of items from the model's response"
 
     def __call__(self, item_stats):
-        responses = item_stats["response"]
         length = [
             extractor(response)
-            for response, extractor
-            in zip(item_stats["response"], item_stats["extractor"])
+            for response, extractor in zip(
+                item_stats["response"], item_stats["extractor"]
+            )
         ]
         return {"length": length}
 
@@ -124,8 +142,11 @@ class SampleLengthCounter:
     Requires sampled lengths and expected number of items.
     Produces 'counts' and 'accuracy'.
     """
+
     requires = ["sampled_length", "number_items"]
-    description = "Counts occurrences of each length across sampled runs and computes accuracy"
+    description = (
+        "Counts occurrences of each length across sampled runs and computes accuracy"
+    )
 
     def __call__(self, item_stats):
         samples = item_stats["sampled_length"]
@@ -135,10 +156,7 @@ class SampleLengthCounter:
             c.get(n, 0) / len(s) if len(s) > 0 else 0
             for c, s, n in zip(counts, samples, number_items)
         ]
-        return {
-            "counts": counts,
-            "accuracy": accuracy
-        }
+        return {"counts": counts, "accuracy": accuracy}
 
 
 if __name__ == "__main__":
@@ -147,9 +165,9 @@ if __name__ == "__main__":
     def resource_builder(env):
         if not hasattr(env, "main_pool"):
             model = OpenAIAPIModel(
-                model_id=os.environ.get(f"OPENAI_API_ENDPOINT_MODEL"),
-                openai_endpoint=os.environ.get(f"OPENAI_API_ENDPOINT_BASE_URL"),
-                openai_api_key=os.environ.get(f"OPENAI_API_ENDPOINT_API_KEY")
+                model_id=os.environ.get("OPENAI_API_ENDPOINT_MODEL"),
+                openai_endpoint=os.environ.get("OPENAI_API_ENDPOINT_BASE_URL"),
+                openai_api_key=os.environ.get("OPENAI_API_ENDPOINT_API_KEY"),
             )
             env.main_pool = ResourcePool([model])
         return env.main_pool
@@ -171,8 +189,8 @@ if __name__ == "__main__":
         NodeConfig(
             SampleLengthCounter(),
             always_recompute=True,
-            sampling_config=SamplingConfig(sampling_size=iterations)
-        )
+            sampling_config=SamplingConfig(sampling_size=iterations),
+        ),
     ]
 
     man = BenchmarkManager(
@@ -184,7 +202,7 @@ if __name__ == "__main__":
         data_storage_path="data",
         show_progress_bars=True,
         halt_on_exception=True,
-        raise_exceptions=True
+        raise_exceptions=True,
     )
 
     # Generate an SVG of the execution graph

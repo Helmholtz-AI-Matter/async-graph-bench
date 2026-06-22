@@ -14,10 +14,13 @@ To ensure scientific integrity and reproducibility, all contributions must adher
     *   Every new feature or bug fix must include a corresponding unit test in `/tests`.
     *   Focus on **edge cases** and **numerical stability** (use `pytest.approx` for floating point comparisons).
 3.  **CI/CD Integration**:
-    *   All changes must be compatible with the GitHub Actions workflow.
-    *   The agent should verify that the test suite passes before declaring a task "complete."
+    * All changes must be compatible with the GitHub Actions workflow.
+    * The agent should verify that the test suite passes before declaring a task "complete."
 4.  **Documentation**:
     *   Docstrings must follow the NumPy/Google format, explicitly stating the physical units of inputs and outputs.
+5.  **Linting & Formatting**:
+    * Run `ruff check` to lint code. Use `ruff check --fix` for auto-fixable issues.
+    * Run `ruff format` to format code.
 
 ## 🤖 Agent Operating Procedures
 

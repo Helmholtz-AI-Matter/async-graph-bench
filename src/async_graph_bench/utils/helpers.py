@@ -1,16 +1,21 @@
+from __future__ import annotations
+
 import itertools
 import json
 from os import makedirs, remove
-from os.path import join, exists
-from typing import Iterable, Generator, Any, Tuple, List
+from os.path import exists, join
+from typing import Any, Generator, Iterable, List, Tuple
 
 from bitarray import bitarray
 
+from ..node_config import NodeConfig
 from ..stores.combined_id import get_combined_id_from_parts
 from ..stores.store import DataStore
 
 
-def get_resolved_keys(store: DataStore, node_config: "NodeConfig", iteration_count: int = 1):
+def get_resolved_keys(
+    store: DataStore, node_config: NodeConfig, iteration_count: int = 1
+):
     """
     Return the set of combined keys that are resolved in a given store.
 
@@ -25,9 +30,13 @@ def get_resolved_keys(store: DataStore, node_config: "NodeConfig", iteration_cou
     Returns:
         A set of combined IDs (tuples) representing resolved items.
     """
-    resolved_ids = set(get_combined_id_from_parts(id, iter) for id, iter in store.iter_keys())
+    resolved_ids = set(
+        get_combined_id_from_parts(id, iter) for id, iter in store.iter_keys()
+    )
     if node_config.is_sampling() and node_config.sampling_mode == "first":
-        resolved_ids = expand_resolved_ids(resolved_ids, iteration_count, node_config.sampling_config.sampling_size)
+        resolved_ids = expand_resolved_ids(
+            resolved_ids, iteration_count, node_config.sampling_config.sampling_size
+        )
     return resolved_ids
 
 
@@ -74,9 +83,7 @@ def get_duplicates(keys):
 
 
 def build_combined_keys(
-        ids: Iterable,
-        iterations: int,
-        iterations_first: bool
+    ids: Iterable, iterations: int, iterations_first: bool
 ) -> List[Tuple[Any, ...]]:
     """
     Build combined keys by pairing item IDs with iteration indices.
@@ -123,9 +130,7 @@ def is_fully_resolved(id_to_idx: dict, resolved_ids: Iterable) -> bool:
 
 
 def expand_resolved_ids(
-        resolved_ids: Iterable[Tuple[int, ...]],
-        iterations: int,
-        sample_size: int
+    resolved_ids: Iterable[Tuple[int, ...]], iterations: int, sample_size: int
 ) -> set:
     """
     Expand resolved IDs to include all iterations within a sampling batch.

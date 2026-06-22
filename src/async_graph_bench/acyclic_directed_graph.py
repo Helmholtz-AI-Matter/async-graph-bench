@@ -22,11 +22,19 @@ class AcyclicDirectedGraph:
         :param node_configs: A list of all calculator and consumer nodes as NodeConfig instances.
         """
         self.data_source: DataSource = data_source
-        self.optional_nodes_configs: Set[NodeConfig] = {node for node in node_configs if not node.greedy}
-        self.greedy_nodes_configs: Set[NodeConfig] = {node for node in node_configs if node.greedy}
+        self.optional_nodes_configs: Set[NodeConfig] = {
+            node for node in node_configs if not node.greedy
+        }
+        self.greedy_nodes_configs: Set[NodeConfig] = {
+            node for node in node_configs if node.greedy
+        }
         # Adjacency list: producer → consumers
-        self.edges: DefaultDict[Union[NodeConfig, DataSource], Set[NodeConfig]] = defaultdict(set)
-        self.unreachable_nodes: Set[NodeConfig] = set()  # Nodes whose required dependencies cannot be resolved
+        self.edges: DefaultDict[Union[NodeConfig, DataSource], Set[NodeConfig]] = (
+            defaultdict(set)
+        )
+        self.unreachable_nodes: Set[NodeConfig] = (
+            set()
+        )  # Nodes whose required dependencies cannot be resolved
         self.pruned_nodes: Set[NodeConfig] = set()  # Nodes removed by treeshaking
         self.sampling: Dict[NodeConfig, Set] = defaultdict(lambda: set())
 
@@ -47,9 +55,11 @@ class AcyclicDirectedGraph:
         return predecessors
 
     def get_safe_edge_targets(self, from_node):
-        """ Returns all target nodes that are safe targets for new edges from_node -> target_node without creating cyclic dependencies """
+        """Returns all target nodes that are safe targets for new edges from_node -> target_node without creating cyclic dependencies"""
         forbidden = {from_node} | self.get_all_predecessors(from_node)
-        all_nodes = {self.data_source} | self.optional_nodes_configs | self.greedy_nodes_configs
+        all_nodes = (
+            {self.data_source} | self.optional_nodes_configs | self.greedy_nodes_configs
+        )
         return all_nodes - forbidden
 
     def get_all_successors(self, node):
@@ -75,7 +85,9 @@ class AcyclicDirectedGraph:
         # Nodes that would create a cycle are the target itself and any node
         # reachable FROM the target (its successors).
         forbidden = self.get_all_successors(target_node) | {target_node}
-        all_nodes = {self.data_source} | self.optional_nodes_configs | self.greedy_nodes_configs
+        all_nodes = (
+            {self.data_source} | self.optional_nodes_configs | self.greedy_nodes_configs
+        )
         return all_nodes - forbidden
 
     def build_graph(self) -> None:
@@ -96,7 +108,9 @@ class AcyclicDirectedGraph:
         - Edges may be created from available provider nodes to predecessors to allow them to
           sample required dependencies, provided doing so does not create cycles.
         """
-        nodes: List[Union[DataSource, NodeConfig]] = [self.data_source]  # already included/available producers
+        nodes: List[Union[DataSource, NodeConfig]] = [
+            self.data_source
+        ]  # already included/available producers
         not_visited = self.optional_nodes_configs | self.greedy_nodes_configs
 
         changed = True
@@ -111,7 +125,9 @@ class AcyclicDirectedGraph:
 
                 # find direct providers among currently added nodes
                 for producer_node in nodes:
-                    provided = set(producer_node.provides).intersection(required_dependencies)
+                    provided = set(producer_node.provides).intersection(
+                        required_dependencies
+                    )
                     if provided:
                         required_dependencies -= provided
                         potential_previous_nodes.add(producer_node)
@@ -129,15 +145,21 @@ class AcyclicDirectedGraph:
                     continue
 
                 # 2) If some required_dependencies remain and some are NOT sampled_xxx -> cannot add now
-                non_sampled_remaining = {d for d in required_dependencies if not d.startswith("sampled_")}
+                non_sampled_remaining = {
+                    d for d in required_dependencies if not d.startswith("sampled_")
+                }
                 if non_sampled_remaining:
                     # cannot add yet, wait for more providers
                     continue
 
                 # 3) Only sampled_... dependencies remain
                 # strip 'sampled_' prefix to get base deps required
-                sampling_base_deps = {d[len("sampled_"):] for d in required_dependencies}
-                missing_sampling_base_deps = {d[len("sampled_"):] for d in required_dependencies}
+                sampling_base_deps = {
+                    d[len("sampled_") :] for d in required_dependencies
+                }
+                missing_sampling_base_deps = {
+                    d[len("sampled_") :] for d in required_dependencies
+                }
 
                 # collect all predecessors (producers and their predecessors) to detect sampling upstream
                 predecessors = set()
@@ -145,8 +167,14 @@ class AcyclicDirectedGraph:
                     predecessors |= {p} | self.get_all_predecessors(p)
 
                 # find any predecessor that applies sampling (according to current sampling map)
-                preds_with_sampling = [n for n in predecessors if not isinstance(n, DataSource) and n.is_sampling()]
-                preds_with_first_mode = [n for n in preds_with_sampling if n.sampling_mode == "first"]
+                preds_with_sampling = [
+                    n
+                    for n in predecessors
+                    if not isinstance(n, DataSource) and n.is_sampling()
+                ]
+                preds_with_first_mode = [
+                    n for n in preds_with_sampling if n.sampling_mode == "first"
+                ]
 
                 added_deps = defaultdict(lambda: set())
                 added_edges = list()
@@ -155,7 +183,9 @@ class AcyclicDirectedGraph:
                 if not preds_with_first_mode:
                     for node in potential_previous_nodes:
                         predecessor_nodes = {node} | self.get_all_predecessors(node)
-                        predecessor_stats = {s for n in predecessor_nodes for s in n.provides}
+                        predecessor_stats = {
+                            s for n in predecessor_nodes for s in n.provides
+                        }
                         for base_dep in list(missing_sampling_base_deps):
                             if base_dep in predecessor_stats:
                                 missing_sampling_base_deps.remove(base_dep)
@@ -188,14 +218,19 @@ class AcyclicDirectedGraph:
                         continue
 
                     # REQUIREMENT: ALL preds_with_first_mode must share the same sampling config
-                    if any(p.sampling_config != consumer_node.sampling_config for p in preds_with_first_mode):
+                    if any(
+                        p.sampling_config != consumer_node.sampling_config
+                        for p in preds_with_first_mode
+                    ):
                         # incompatible sampling configurations upstream -> cannot add consumer
                         continue
 
                     # Determine the set of base dependencies (without "sampled_" prefix) that the consumer needs
 
                     for node in preds_with_first_mode:
-                        missing_sampling_base_deps -= set(self.sampling[node])  # these are already sampled
+                        missing_sampling_base_deps -= set(
+                            self.sampling[node]
+                        )  # these are already sampled
 
                     for node in preds_with_first_mode:
                         predecessor_nodes = self.get_all_predecessors(node)
@@ -238,8 +273,8 @@ class AcyclicDirectedGraph:
                     present_deps.update(getattr(n, "provides", []))
                 missing_dependencies = set(consumer.requires) - present_deps
                 log.warning(
-                    f'Removed unreachable consumer {consumer.id} due to missing required dependencies. '
-                    f'(Missing Dependencies: {missing_dependencies}, Present Dependencies: {present_deps})'
+                    f"Removed unreachable consumer {consumer.id} due to missing required dependencies. "
+                    f"(Missing Dependencies: {missing_dependencies}, Present Dependencies: {present_deps})"
                 )
             # remove unreachable greedy nodes from the greedy set
             self.greedy_nodes_configs -= unreachable_greedy_nodes
@@ -330,10 +365,14 @@ class AcyclicDirectedGraph:
             if len(sources) > 1:
                 for source in sources:
                     for other_source in sources:
-                        if source != other_source and self._is_descendant_node(other_source, source):
+                        if source != other_source and self._is_descendant_node(
+                            other_source, source
+                        ):
                             if node in self.edges[other_source]:
                                 self.edges[other_source].remove(node)
-                                log.info(f"Removed edge from {other_source.id} to {node.id}")
+                                log.info(
+                                    f"Removed edge from {other_source.id} to {node.id}"
+                                )
 
     def count_parents(self, node: NodeConfig) -> int:
         """
@@ -344,14 +383,18 @@ class AcyclicDirectedGraph:
         """
         return sum(node in children for children in self.edges.values())
 
-    def track_consumers_by_calculator(self) -> DefaultDict[NodeConfig, List[NodeConfig]]:
+    def track_consumers_by_calculator(
+        self,
+    ) -> DefaultDict[NodeConfig, List[NodeConfig]]:
         """
         Tracks all greedy consumers that are downstream of each optional calculator,
         by backtracking through the graph.
 
         :return: A mapping from calculator nodes to lists of their dependent consumers.
         """
-        consumers_by_calculator: DefaultDict[NodeConfig, List[NodeConfig]] = defaultdict(list)
+        consumers_by_calculator: DefaultDict[NodeConfig, List[NodeConfig]] = (
+            defaultdict(list)
+        )
 
         for consumer in self.greedy_nodes_configs:
             queue = deque([consumer])
@@ -392,7 +435,9 @@ class AcyclicDirectedGraph:
         new_graph.edges = defaultdict(set, {k: set(v) for k, v in self.edges.items()})
         new_graph.unreachable_nodes = set(self.unreachable_nodes)
         new_graph.pruned_nodes = set(self.pruned_nodes)
-        new_graph.sampling = defaultdict(set, {k: set(v) for k, v in self.sampling.items()})
+        new_graph.sampling = defaultdict(
+            set, {k: set(v) for k, v in self.sampling.items()}
+        )
         return new_graph
 
     def remove_node(self, node: NodeConfig) -> None:
@@ -419,7 +464,9 @@ class AcyclicDirectedGraph:
         for n in to_remove:
             self.sampling.pop(n, None)
 
-    def get_nodes_and_edges_in_topological_order(self) -> Tuple[List[NodeConfig], List[Tuple[NodeConfig, NodeConfig]]]:
+    def get_nodes_and_edges_in_topological_order(
+        self,
+    ) -> Tuple[List[NodeConfig], List[Tuple[NodeConfig, NodeConfig]]]:
         """
         Traverse from data_source in breadth-first order and return:
           - all optional+greedy nodes in dependency-respecting order
@@ -432,7 +479,9 @@ class AcyclicDirectedGraph:
 
         while queue:
             node = queue.popleft()
-            children = sorted(self.edges.get(node, []), key=lambda n: n.id)  # sorted for deterministic order
+            children = sorted(
+                self.edges.get(node, []), key=lambda n: n.id
+            )  # sorted for deterministic order
             for child in children:
                 edges.append((node, child))
                 if child not in seen:
