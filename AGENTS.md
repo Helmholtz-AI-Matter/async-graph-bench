@@ -11,7 +11,7 @@ To ensure scientific integrity and reproducibility, all contributions must adher
     *   No naked `pip install`. Use `pyproject.toml` or `requirements.txt`.
     *   Prefer explicit version pinning for scientific libraries (e.g., `numpy==1.26.0`) to prevent breaking changes in numerical results.
 2.  **Rigorous Testing**:
-    *   Every new feature or bug fix must include a corresponding unit test in `/tests`.
+    *   Every new feature or bug fix must include a corresponding unit test in `/tests`. Note, unit tests in `/tests` should only cover functionality that is provided by `/src/async_graph_bench`. Ignore any code in the `/examples` folder when considering to write tests. The examples can have their own unit tests.
     *   Focus on **edge cases** and **numerical stability** (use `pytest.approx` for floating point comparisons).
 3.  **CI/CD Integration**:
     * All changes must be compatible with the GitHub Actions workflow.
@@ -21,6 +21,7 @@ To ensure scientific integrity and reproducibility, all contributions must adher
 5.  **Linting & Formatting**:
     * Run `ruff check` to lint code. Use `ruff check --fix` for auto-fixable issues.
     * Run `ruff format` to format code.
+6.  **Propagate Changes**: the code in `/examples` is demonstrating the use of the library provided by `/src/async_graph_bench`. Whenever code in `/src/` changes, propagage these changes into the examples without breaking them.
 
 ## 🤖 Agent Operating Procedures
 
@@ -28,6 +29,7 @@ To ensure scientific integrity and reproducibility, all contributions must adher
 *   **Surgical Changes**: Avoid rewriting entire files to change a single function. Use targeted edits to preserve original comments and formatting.
 *   **Avoid Refactor-Creep**: Do not refactor unrelated code unless explicitly requested. If you see a better way to do something elsewhere, note it in the chat rather than changing it silently.
 *   **Modularity**: Respect the established modularity of the project. Suggest only code edits which keep the code modular and maintainable.
+*   **Clean Imports**: Avoid relative imports where possible. In other words, do not keep or write statements like `from ...some_lib import method`. Try to use absolute imports where possible.
 
 ### 2. Human-in-the-Loop (HITL)
 *   **Checkpointing**: Before performing destructive operations (e.g., deleting files, large-scale migrations), propose the plan and wait for user approval.
