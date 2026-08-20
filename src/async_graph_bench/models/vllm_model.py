@@ -76,12 +76,14 @@ class VLLMModel(Model):
         model: LLM,
         use_chat_template=True,
         reasoning_parser_mode: ReasoningParserMode = None,
+        chat_template=None,
     ):
         self.model = model
         self.use_chat_template = use_chat_template
         self.reasoning_parser_mode = reasoning_parser_mode
+        self.chat_template = chat_template
         self.query_model = (
-            self.model.chat if self.use_chat_template else self.model.generate
+            self.chat if self.use_chat_template else self.model.generate
         )
 
     async def query(
@@ -93,11 +95,23 @@ class VLLMModel(Model):
         if self.use_chat_template:
             prompt = normalize_chat_input(prompt)
 
-        response = self.query_model(
-            prompt,
-            sampling_params=sampling_params_from_generation_params(generation_params),
-            use_tqdm=False,
-        )
+        try:
+            response = self.query_model(
+                prompt,
+                sampling_params=sampling_params_from_generation_params(generation_params),
+                use_tqdm=False,
+                chat_template=self.chat_template,
+            )
+        except Exception as e:
+            if self.chat_template is None and "chat template" in str(e).lower():
+                response = self.query_model(
+                    prompt,
+                    sampling_params=sampling_params_from_generation_params(generation_params),
+                    use_tqdm=False,
+                    chat_template="chatml.jinja",
+                )
+            else:
+                raise
 
         return VLLMResponseWrapper(
             response=response,

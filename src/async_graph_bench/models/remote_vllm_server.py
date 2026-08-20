@@ -121,7 +121,13 @@ async def chat_endpoint(request: Request):
         from vllm import SamplingParams
 
         sp = SamplingParams(**sampling_kwargs) if sampling_kwargs else None
-        outputs = llm.chat(prompts, sp, use_tqdm=False)
+        try:
+            outputs = llm.chat(prompts, sp, use_tqdm=False)
+        except Exception as e:
+            if "chat template" in str(e).lower():
+                outputs = llm.chat(prompts, sp, use_tqdm=False, chat_template="chatml.jinja")
+            else:
+                raise
         return Response(
             content=pickle.dumps(outputs), media_type="application/octet-stream"
         )
