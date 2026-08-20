@@ -27,6 +27,7 @@ async def start_workers(
     llm_kwargs: Optional[Dict[str, Any]] = None,
     gpus: Optional[List[Optional[int]]] = None,
     log_level=logging.INFO,
+    chat_template=None,
 ) -> Tuple[List[WorkerClient], Callable]:
     """
     Start several subprocesses running vLLM instances.
@@ -96,6 +97,7 @@ async def start_workers(
                 llm_kwargs or {},
                 gpu_ids,
                 log_level if i == 0 else logging.CRITICAL,
+                chat_template,
             ),
         )
         processes.append(proc)

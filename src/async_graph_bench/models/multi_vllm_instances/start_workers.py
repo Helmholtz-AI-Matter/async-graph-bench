@@ -26,6 +26,7 @@ async def start_workers(
     gpus_per_worker: int,
     llm_kwargs: Optional[Dict[str, Any]] = None,
     gpus: Optional[List[Optional[int]]] = None,
+    chat_template=None,
 ) -> Tuple[List[WorkerClient], Callable]:
     """
     Start several subprocesses running vLLM instances.
@@ -94,6 +95,7 @@ async def start_workers(
                 llm_kwargs or {},
                 gpu_ids,
                 i == 0,
+                chat_template,
             ),
         )
         processes.append(proc)

@@ -31,7 +31,7 @@ def normalize_chat_input(user_input: Any) -> List[List[Dict[str, Any]]]:
 # ---------------- worker function that runs inside subprocess ----------------
 
 
-def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, debug):
+def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, debug, chat_template=None):
     """
     Runs in subprocess. Communicates:
       - initialization status via `init_q` (single message: {"status":"ok"} or {"status":"error", ...})
@@ -81,6 +81,8 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
         from vllm import LLM, SamplingParams  # noqa: F401
 
         # Initialize LLM
+        if chat_template is not None:
+            llm_kwargs["chat_template"] = chat_template
         llm = LLM(model=model_name, **(llm_kwargs or {}))
         # report success of initialization (only to init_q)
         try:
@@ -122,8 +124,9 @@ def _worker_main(init_q, request_q, result_q, model_name, llm_kwargs, gpu_ids, d
                 if method == "chat":
                     messages_raw = args[0] if args else kwargs.get("messages")
                     sampling_params = kwargs.get("sampling_params")
+                    chat_template = kwargs.get("chat_template")
                     prompts = normalize_chat_input(messages_raw)
-                    outputs = llm.chat(prompts, sampling_params, use_tqdm=False)
+                    outputs = llm.chat(prompts, sampling_params, use_tqdm=False, chat_template=chat_template)
                     result_q.put({"id": req_id, "status": "ok", "result": outputs})
 
                 elif method == "generate":
