@@ -117,6 +117,134 @@ This allows you to **compare both performance and output characteristics** betwe
 
 When examining `benchmark.csv`, you may observe that using `vllm-offline-multi-instance` increases processing speed, but the improvement is not linear—for example, using 8 instances does not yield an 8× speedup. This behavior arises from the framework’s **asynchronous, concurrent execution model**. Once the combined throughput of all model instances exceeds the rate at which items can be processed, serialized, and passed between nodes on the main thread, additional instances no longer contribute to overall speed. Increasing the `batch_size` may help mitigate this bottleneck, but a **performance ceiling** will eventually be reached due to these synchronization and utility overheads.
 
+# Local Installation
+
+## vLLM
+
+Use `vLLM` for **fast local inference** with batching and GPU acceleration.
+
+---
+
+### Initial Setup
+
+Connect via the **gateway**:
+
+```bash
+ssh -J <user>@uts.hzdr.de <user>@rosi5
+```
+
+Then load required modules:
+
+```bash
+ml python/3.12.4 cuda/12.8 gcc/14.2.0
+```
+---
+Create a virtual environment:
+
+```bash
+python -m venv venv_vllm
+source venv_vllm/bin/activate
+pip install wheel setuptools vllm
+```
+
+---
+
+### Model Caching & HuggingFace Setup
+
+By default, Hugging Face caches models in `~/.hf_cache`. Beware: They are large!
+
+You can set a custom cache location:
+
+```bash
+export HF_HOME=/bigdata/haicu/mueller3/hf-cache/huggingface
+mkdir -p $HF_HOME
+pip install --upgrade huggingface_hub
+```
+
+---
+
+### Hugging Face Authentication
+
+Create an access token at  
+[https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+
+Then log in:
+
+```bash
+huggingface-cli login
+```
+
+Download a model (e.g., _Ministral-8B-Instruct-2410_):
+
+```bash
+huggingface-cli download mistralai/Ministral-8B-Instruct-2410
+```
+
+---
+
+### Starting an HPC Session
+
+Run on GPU nodes:
+
+```bash
+screen -U
+# H100
+srun -c 8 --time 4:00:00 --pty --gres=gpu:8 -p gpu-h100 bash -l -i
+# A100
+srun -c 8 --time 4:00:00 --pty --gres=gpu:8 -p gpu-a100 bash -l -i
+
+ml python/3.12.4 cuda/12.8 gcc/14.2.0
+export HF_HOME=/bigdata/haicu/mueller3/hf-cache/huggingface
+source venv_vllm/bin/activate
+```
+
+---
+
+### **Serving Local Models with vLLM (1)**
+
+1. **Get your local machine’s IP address:**
+	```bash
+	hostname -i
+	```
+2. **Start a vLLM model server** for your chosen model (example: _Ministral-8B-Instruct-2410_):
+	```bash
+	vllm serve mistralai/Ministral-8B-Instruct-2410 \
+		--tensor-parallel-size 1 \
+		--tokenizer-mode mistral \  # required for Mistral models
+		--port <PORT> \
+		--api-key <MY_API_KEY>      # optional – set or omit as needed
+	```
+---
+### **Serving Local Models with vLLM (2)**
+3. **Connect to the API endpoint:**
+	* **Endpoint:** `http://<IP>:<PORT>/v1`
+    - **API Key:** `<MY_API_KEY>` (or leave blank if none was set)
+
+✅ **Tip:**  
+You can verify that the server is running by visiting  
+`http://<IP>:<PORT>/docs` — vLLM automatically hosts an OpenAPI UI there.
+
+---
+### vLLM Arguments (1)
+
+Common configuration options for `vLLM.LLM` allow you to control GPU usage, memory management, and inference behavior.
+- `tensor_parallel_size` — Number of GPUs to use in parallel for model inference. Use `1` for single-GPU, or more to distribute large models across multiple GPUs.
+- `tokenizer` — Path or name of the tokenizer to use. Useful when the model’s tokenizer differs from its default or when using custom vocabularies.
+---
+### vLLM Arguments (2)
+- `gpu_memory_utilization` — Fraction of each GPU’s memory available for inference (default: `0.9`). Lower this value if you encounter out-of-memory errors.
+- `enable_prefix_caching` — Enables caching of prompt prefixes to speed up repeated or batched queries with shared context.
+---
+### vLLM Arguments (3)
+- `enforce_eager` — Forces eager execution (disables CUDA graph optimizations). Useful for debugging or when encountering kernel compilation issues.
+- `max_model_len` — Maximum sequence length (in tokens) the model can handle. This controls both input and output size limits.
+- `seed` — Random seed for deterministic output generation, ensuring reproducible results across runs.
+---
+Model-specific configurations can be found in:
+
+- `DEFAULTS`
+- `kwargs_a100` (A100 GPUs)
+- `kwargs_h100` (H100 GPUs)  
 
 # For Debugging
 
