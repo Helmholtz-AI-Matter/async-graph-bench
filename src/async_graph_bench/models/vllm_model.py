@@ -83,7 +83,7 @@ class VLLMModel(Model):
         self.reasoning_parser_mode = reasoning_parser_mode
         self.chat_template = chat_template
         self.query_model = (
-            self.chat if self.use_chat_template else self.model.generate
+            self.model.chat if self.use_chat_template else self.model.generate
         )
 
     async def query(
@@ -95,21 +95,25 @@ class VLLMModel(Model):
         if self.use_chat_template:
             prompt = normalize_chat_input(prompt)
 
+        query_kwargs = {
+            "sampling_params": sampling_params_from_generation_params(
+                generation_params
+            ),
+            "use_tqdm": False,
+        }
+        if self.use_chat_template:
+            query_kwargs["chat_template"] = self.chat_template
+
         try:
-            response = self.query_model(
-                prompt,
-                sampling_params=sampling_params_from_generation_params(generation_params),
-                use_tqdm=False,
-                chat_template=self.chat_template,
-            )
+            response = self.query_model(prompt, **query_kwargs)
         except Exception as e:
-            if self.chat_template is None and "chat template" in str(e).lower():
-                response = self.query_model(
-                    prompt,
-                    sampling_params=sampling_params_from_generation_params(generation_params),
-                    use_tqdm=False,
-                    chat_template="chatml.jinja",
-                )
+            if (
+                self.use_chat_template
+                and self.chat_template is None
+                and "chat template" in str(e).lower()
+            ):
+                query_kwargs["chat_template"] = "chatml.jinja"
+                response = self.query_model(prompt, **query_kwargs)
             else:
                 raise
 
