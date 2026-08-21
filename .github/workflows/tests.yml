@@ -17,5 +17,18 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-huggingface-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-huggingface-
+
       - name: Run unit tests
         run: pytest
+
+      - name: Run slow integration tests
+        run: pytest -m slow
+        env:
+          HF_HUB_CACHE: ~/.cache/huggingface

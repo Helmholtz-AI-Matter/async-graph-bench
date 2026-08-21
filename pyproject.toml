@@ -49,3 +49,4 @@ docs = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = ["slow: mark test as slow"]

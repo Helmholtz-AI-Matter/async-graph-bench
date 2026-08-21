@@ -5,7 +5,10 @@ pytest.importorskip("torch")
 
 from async_graph_bench import GenerationParameters
 from async_graph_bench.models import vllm_model
-from async_graph_bench.models.vllm_model import VLLMModel
+from async_graph_bench.models.vllm_model import (
+    VLLMModel,
+    sampling_params_from_generation_params,
+)
 
 
 class FakeLLM:
@@ -75,3 +78,20 @@ async def test_chat_template_fallback_is_only_used_for_chat(
 
     assert model.chat_calls[0][1]["chat_template"] is None
     assert model.chat_calls[1][1]["chat_template"] == "chatml.jinja"
+
+
+def test_structured_output_uses_installed_vllm_parameter_name():
+    params = GenerationParameters(
+        response_format={
+            "type": "json_schema",
+            "json_schema": {"type": "object"},
+        }
+    )
+
+    sampling_params = sampling_params_from_generation_params(params)
+
+    structured_outputs = getattr(sampling_params, "structured_outputs", None)
+    if structured_outputs is None:
+        structured_outputs = getattr(sampling_params, "guided_decoding", None)
+
+    assert structured_outputs is not None

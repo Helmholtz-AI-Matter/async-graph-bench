@@ -1,3 +1,6 @@
+import gc
+import os
+import tempfile
 import pytest
 
 vllm = pytest.importorskip("vllm")
@@ -11,6 +14,7 @@ if not torch.cuda.is_available():
     TESTDEVICE=torch.device("cpu")
 
 from vllm import LLM
+from async_graph_bench.models import vllm_model
 from async_graph_bench.models.vllm_model import VLLMModel
 from async_graph_bench import GenerationParameters
 
@@ -18,8 +22,6 @@ from async_graph_bench import GenerationParameters
 @pytest.fixture(scope="module")
 def tiny_model_shared():
     """Load tiny model for integration tests that returns random outputs."""
-    import os
-    import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdir:
         os.environ["HF_HOME"] = tmpdir
@@ -31,35 +33,16 @@ def tiny_model_shared():
         #https://docs.vllm.ai/en/stable/contributing/model/tests/
         llm = LLM(model="yujiepan/mamba2-codestral-v0.1-tiny-random",
                   #max_seq_len=2048,
-                  gpu_memory_utilization=0.5
+                  max_model_len=256,
+                  max_num_seqs=1,
+                  gpu_memory_utilization=0.35,
+                  enforce_eager=True
                   )
         yield llm
 
         #try to cleanup
         del llm
-
-@pytest.fixture
-def tiny_model_instance():
-    """Load tiny model for integration tests that returns random outputs."""
-    import os
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        os.environ["HF_HOME"] = tmpdir
-        os.environ["HF_HUB_CACHE"] = tmpdir
-
-        #for tiny model alternatives check
-        #https://github.com/vllm-project/vllm/blob/main/tests/models/registry.py
-        #hinted at by
-        #https://docs.vllm.ai/en/stable/contributing/model/tests/
-        llm = LLM(model="yujiepan/mamba2-codestral-v0.1-tiny-random",
-                  #max_seq_len=2048,
-                  gpu_memory_utilization=0.5
-                  )
-        yield llm
-
-        #try to cleanup
-        del llm
+        gc.collect()
 
 @pytest.fixture
 def generation_params():
@@ -248,14 +231,37 @@ class TestVLLMModelIntegration:
         assert result is not None
         assert len(result.get_messages()) == 1
 
-    @pytest.mark.slow
-    def test_close_method(self, tiny_model_instance):
+    def test_close_method(self, monkeypatch):
         """Test VLLMModel close method."""
-        model = VLLMModel(tiny_model_instance, use_chat_template=False)
+        class MockDriverWorker:
+            pass
+
+        class MockModelExecutor:
+            driver_worker = MockDriverWorker()
+
+        class MockEngine:
+            model_executor = MockModelExecutor()
+
+        class MockLLM:
+            llm_engine = MockEngine()
+
+            def generate(self, *args, **kwargs):
+                pass
+
+        monkeypatch.setattr(vllm_model, "destroy_model_parallel", lambda: None)
+        monkeypatch.setattr(
+            vllm_model, "destroy_distributed_environment", lambda: None
+        )
+        monkeypatch.setattr(
+            vllm_model.torch.distributed, "destroy_process_group", lambda: None
+        )
+        monkeypatch.setattr(vllm_model.torch.cuda, "empty_cache", lambda: None)
+
+        model = VLLMModel(MockLLM(), use_chat_template=False)
 
         model.close()
 
-        assert model is not None
+        assert not hasattr(model, "model")
 
     async def test_disable_reasoning_parser(self, tiny_model_shared, generation_params):
         """Test disabling reasoning parser at query time."""

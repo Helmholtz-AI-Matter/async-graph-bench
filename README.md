@@ -57,7 +57,9 @@ The documentation is mainted in `docs/`. These are sphinx-generated pages. We ar
 
 ## Development
 
-Install dev dependencies with `pip install -e ".[dev]"`.
+Install dev dependencies with `pip install -e ".[dev]"`. Perhaps resort to vllm on cpu for running everything:
+`uv pip install vllm --extra-index-url https://wheels.vllm.ai/0.27.1/cpu --torch-backend cpu`
+For more vllm installation hints, see [here](https://vllm.ai/).
 
 **Run CI Checks Locally**
 
