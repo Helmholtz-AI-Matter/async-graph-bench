@@ -11,7 +11,7 @@ __all__ = [
     "NodeExecutionWrapper",
     "DataSourceExecutionWrapper",
 ]
-from .decorators import (
+from async_graph_bench.execution_nodes.decorators import (
     batching,
     data_cache,
     multi_incoming_node,
@@ -22,5 +22,9 @@ from .decorators import (
     with_resources,
     coordinated_end_of_data,
 )
-from .node_execution_wrapper import NodeExecutionWrapper
-from .data_source_execution_wrapper import DataSourceExecutionWrapper
+from async_graph_bench.execution_nodes.node_execution_wrapper import (
+    NodeExecutionWrapper,
+)
+from async_graph_bench.execution_nodes.data_source_execution_wrapper import (
+    DataSourceExecutionWrapper,
+)

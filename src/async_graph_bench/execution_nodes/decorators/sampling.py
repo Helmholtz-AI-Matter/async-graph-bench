@@ -2,7 +2,7 @@ import asyncio
 from collections import defaultdict
 from typing import Iterable, Callable, List, Optional, Union, Dict
 
-from ...utils.end_of_data import EndOfData
+from async_graph_bench.utils.end_of_data import EndOfData
 
 
 def sampling(

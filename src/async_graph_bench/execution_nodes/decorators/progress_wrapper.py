@@ -1,4 +1,4 @@
-from ...utils.end_of_data import EndOfData
+from async_graph_bench.utils.end_of_data import EndOfData
 
 
 def progress_wrapper(generator, progress_bar):

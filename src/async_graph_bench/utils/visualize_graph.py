@@ -1,6 +1,6 @@
 import logging
 
-from ..acyclic_directed_graph import AcyclicDirectedGraph
+from async_graph_bench.acyclic_directed_graph import AcyclicDirectedGraph
 
 log = logging.getLogger(__name__)
 

@@ -7,9 +7,13 @@ import pandas as pd
 from diskcache import Cache
 from tqdm import tqdm
 
-from .combined_id import get_combined_id_from_parts
-from .serializers import ZLibCompressionSerializer, PickleSerializer, Serializer
-from .store import DataStore
+from async_graph_bench.stores.combined_id import get_combined_id_from_parts
+from async_graph_bench.stores.serializers import (
+    ZLibCompressionSerializer,
+    PickleSerializer,
+    Serializer,
+)
+from async_graph_bench.stores.store import DataStore
 
 log = logging.getLogger(__name__)
 

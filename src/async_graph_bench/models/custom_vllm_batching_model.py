@@ -1,6 +1,7 @@
 import os
 from typing import List
-from . import Model, GenerationParameters
+from async_graph_bench.models.abstract_classes import Model
+from async_graph_bench.models.generation_parameters import GenerationParameters
 
 try:
     from openai import AsyncOpenAI

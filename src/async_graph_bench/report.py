@@ -6,9 +6,9 @@ from dataclasses import dataclass, asdict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from .manager import BenchmarkManager
+    from async_graph_bench.manager import BenchmarkManager
 
-from .utils.helpers import get_resolved_keys, resolved_ids_to_bitarray
+from async_graph_bench.utils.helpers import get_resolved_keys, resolved_ids_to_bitarray
 
 
 @dataclass

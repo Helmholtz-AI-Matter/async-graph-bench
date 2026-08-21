@@ -5,9 +5,12 @@ from typing import Dict
 from types import SimpleNamespace
 from openai import AsyncOpenAI
 
-from .openai_api_response_wrapper import OpenAIAPIResponseWrapper
+from async_graph_bench.models.openai_api_response_wrapper import (
+    OpenAIAPIResponseWrapper,
+)
 
-from .abstract_classes import Model, GenerationParameters
+from async_graph_bench.models.abstract_classes import Model
+from async_graph_bench.models.generation_parameters import GenerationParameters
 
 
 def _should_dryrun() -> bool:

@@ -11,9 +11,9 @@ if importlib.util.find_spec("torch") is None:
         "To use this functionality, you need to install the 'torch' module"
     )
 
-from ..worker_client import WorkerClient
-from ..vllm_model import sampling_params_from_generation_params
-from ..vllm_response_wrapper import VLLMResponseWrapper
+from async_graph_bench.models.multi_vllm_instances.worker_client import WorkerClient
+from async_graph_bench.models.vllm_model import sampling_params_from_generation_params
+from async_graph_bench.models.vllm_response_wrapper import VLLMResponseWrapper
 
 
 class RemoteVLLMModel:

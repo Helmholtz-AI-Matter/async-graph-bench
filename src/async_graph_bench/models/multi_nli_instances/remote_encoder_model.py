@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...multi_vllm_instances.worker_client import WorkerClient
+from async_graph_bench.models.multi_vllm_instances.worker_client import WorkerClient
 
 
 class RemoteEncoderModel:

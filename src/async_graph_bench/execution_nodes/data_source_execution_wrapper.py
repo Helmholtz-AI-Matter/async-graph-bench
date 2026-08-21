@@ -1,7 +1,7 @@
 import logging
 from typing import AsyncIterator, Callable, Dict, Any, Iterable
 from collections.abc import AsyncIterable
-from ..utils.end_of_data import EndOfData  # Adjust import if needed
+from async_graph_bench.utils.end_of_data import EndOfData
 
 log = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from typing import Union, List
 
-from ...utils.end_of_data import EndOfData
-from ...stores import DataStore
+from async_graph_bench.utils.end_of_data import EndOfData
+from async_graph_bench.stores import DataStore
 
 
 def data_cache(generator, store: DataStore, properties: Union[List[str], "all"]):

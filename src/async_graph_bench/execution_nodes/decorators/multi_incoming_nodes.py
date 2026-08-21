@@ -1,7 +1,7 @@
 from collections import defaultdict
 from asyncio import Lock
-from ...utils.end_of_data import EndOfData
-from ...stores import get_combined_id
+from async_graph_bench.utils.end_of_data import EndOfData
+from async_graph_bench.stores import get_combined_id
 
 
 def multi_incoming_node(generator, incoming_nodes_count):

@@ -4,11 +4,11 @@ import logging
 from typing import Awaitable, Callable, List, Optional, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    from .utils import BuilderEnvironment, ResourcePool
+    from async_graph_bench.utils import BuilderEnvironment, ResourcePool
 
-from .node import Node
-from .sampling_config import SamplingConfig
-from .stores import DataStore
+from async_graph_bench.node import Node
+from async_graph_bench.sampling_config import SamplingConfig
+from async_graph_bench.stores import DataStore
 
 log = logging.getLogger(__name__)
 

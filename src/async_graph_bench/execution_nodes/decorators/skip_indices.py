@@ -1,6 +1,6 @@
 from bitarray import bitarray
 
-from ...utils.end_of_data import EndOfData
+from async_graph_bench.utils.end_of_data import EndOfData
 
 
 def skip_indices(generator, indices_to_skip: bitarray):

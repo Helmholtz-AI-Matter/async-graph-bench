@@ -3,7 +3,7 @@ from typing import List, Tuple
 import importlib.util
 import logging
 
-from .abstract_classes import ResponseWrapper
+from async_graph_bench.models.abstract_classes import ResponseWrapper
 
 if importlib.util.find_spec("openai") is None:
     raise ImportError(

@@ -1,7 +1,7 @@
 import json
 from typing import Optional
 
-from .in_memory_store import InMemoryStore
+from async_graph_bench.stores.in_memory_store import InMemoryStore
 
 
 def encode_tuples(obj):
