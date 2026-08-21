@@ -15,13 +15,18 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          python -m pip install uv
+          uv pip install --system \
+            --extra-index-url https://wheels.vllm.ai/0.27.1/cpu \
+            --torch-backend cpu \
+            -e ".[dev]"
 
       - name: Cache Hugging Face models
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: ${{ runner.os }}-huggingface-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-huggingface-${{ hashFiles('**/requirements.txt', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-huggingface-
 

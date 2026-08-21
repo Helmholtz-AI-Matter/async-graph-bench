@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install package & docs dependencies
-        run: pip install -e ".[dev,docs]"
+        run: pip install -e ".[docs]"
 
       - name: Generate API docs
         run: python docs/generate_api.py

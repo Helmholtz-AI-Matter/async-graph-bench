@@ -45,7 +45,8 @@ graphs (DAGs)**. It is designed for multistep computations, where intermediate c
 
 ## Installation
 
-Install locally using `pip install -e .`
+Install locally using `pip install -e .`. vLLM is optional and can be installed with
+`pip install -e ".[vllm]"`.
 
 ## Examples
 
@@ -57,8 +58,15 @@ The documentation is mainted in `docs/`. These are sphinx-generated pages. We ar
 
 ## Development
 
-Install dev dependencies with `pip install -e ".[dev]"`. Perhaps resort to vllm on cpu for running everything:
-`uv pip install vllm --extra-index-url https://wheels.vllm.ai/0.27.1/cpu --torch-backend cpu`
+Install development dependencies with the CPU-only vLLM build:
+
+```bash
+python -m pip install uv
+uv pip install --extra-index-url https://wheels.vllm.ai/0.27.1/cpu --torch-backend cpu -e ".[dev]"
+```
+
+For a regular vLLM installation, use `pip install -e ".[vllm]"` and select the
+appropriate vLLM and PyTorch wheels for your hardware.
 For more vllm installation hints, see [here](https://vllm.ai/).
 
 **Run CI Checks Locally**
