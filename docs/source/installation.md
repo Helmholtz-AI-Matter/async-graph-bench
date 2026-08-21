@@ -32,10 +32,26 @@ Some features require additional packages depending on the models or visualizati
 | Feature                 | Required Packages | Purpose                                     |
 | ----------------------- | ----------------- |---------------------------------------------|
 | **vLLM model support**  | `vllm`, `torch`   | Required for running vLLM-based models      |
+<!-- | **Remote vLLM client**  | `aiohttp`         | Required for the remote vLLM client         | -->
 | **OpenAI API support**  | `openai`          | Required for querying OpenAI API endpoints  |
 | **Graph visualization** | `graphviz`        | Required for rendering execution graphs     |
 
-You can install these manually as needed, for example:
+The package itself does not install vLLM. Install the optional vLLM extra as needed:
+
+```bash
+pip install -e ".[vllm]"
+# pip install -e ".[remote-vllm]"
+```
+
+For development and CPU-only integration tests, install the development extra from
+the CPU vLLM wheel index:
+
+```bash
+python -m pip install uv
+uv pip install --extra-index-url https://wheels.vllm.ai/0.27.1/cpu --torch-backend cpu -e ".[dev]"
+```
+
+Other optional packages can be installed manually as needed, for example:
 
 ```bash
 pip install vllm torch

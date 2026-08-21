@@ -20,6 +20,7 @@ except ImportError as e:
 
 import contextlib
 import gc
+import inspect
 from typing import List, Union, Dict, Any
 
 from . import Model, GenerationParameters
@@ -66,7 +67,15 @@ def sampling_params_from_generation_params(
                 f"StructuredOutputsParams Response Format Type {response_format} not supported"
             )
         del params_dict["response_format"]
-        params_dict["guided_decoding"] = guided_decoding_params
+        sampling_params = inspect.signature(SamplingParams).parameters
+        if "structured_outputs" in sampling_params:
+            params_dict["structured_outputs"] = guided_decoding_params
+        elif "guided_decoding" in sampling_params:
+            params_dict["guided_decoding"] = guided_decoding_params
+        else:
+            raise RuntimeError(
+                "Installed vLLM version does not support structured outputs"
+            )
     return SamplingParams(**params_dict)
 
 
@@ -83,7 +92,7 @@ class VLLMModel(Model):
         self.reasoning_parser_mode = reasoning_parser_mode
         self.chat_template = chat_template
         self.query_model = (
-            self.chat if self.use_chat_template else self.model.generate
+            self.model.chat if self.use_chat_template else self.model.generate
         )
 
     async def query(
@@ -95,21 +104,25 @@ class VLLMModel(Model):
         if self.use_chat_template:
             prompt = normalize_chat_input(prompt)
 
+        query_kwargs = {
+            "sampling_params": sampling_params_from_generation_params(
+                generation_params
+            ),
+            "use_tqdm": False,
+        }
+        if self.use_chat_template:
+            query_kwargs["chat_template"] = self.chat_template
+
         try:
-            response = self.query_model(
-                prompt,
-                sampling_params=sampling_params_from_generation_params(generation_params),
-                use_tqdm=False,
-                chat_template=self.chat_template,
-            )
+            response = self.query_model(prompt, **query_kwargs)
         except Exception as e:
-            if self.chat_template is None and "chat template" in str(e).lower():
-                response = self.query_model(
-                    prompt,
-                    sampling_params=sampling_params_from_generation_params(generation_params),
-                    use_tqdm=False,
-                    chat_template="chatml.jinja",
-                )
+            if (
+                self.use_chat_template
+                and self.chat_template is None
+                and "chat template" in str(e).lower()
+            ):
+                query_kwargs["chat_template"] = "chatml.jinja"
+                response = self.query_model(prompt, **query_kwargs)
             else:
                 raise
 
