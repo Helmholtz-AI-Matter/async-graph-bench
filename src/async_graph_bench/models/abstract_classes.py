@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple
 
-from .generation_parameters import GenerationParameters
+from async_graph_bench.models.generation_parameters import GenerationParameters
 
 
 class ResponseWrapper(ABC):

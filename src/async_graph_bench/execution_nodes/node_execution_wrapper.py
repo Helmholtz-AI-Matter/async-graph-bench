@@ -2,8 +2,8 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Union, AsyncIterator
 
-from ..node_config import NodeConfig
-from ..utils.end_of_data import EndOfData
+from async_graph_bench.node_config import NodeConfig
+from async_graph_bench.utils.end_of_data import EndOfData
 
 log = logging.getLogger(__name__)
 

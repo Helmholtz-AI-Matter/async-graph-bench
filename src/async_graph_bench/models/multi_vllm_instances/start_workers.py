@@ -7,8 +7,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aioprocessing
 
-from .vllm_worker import _worker_main
-from .worker_client import WorkerClient
+from async_graph_bench.models.multi_vllm_instances.vllm_worker import _worker_main
+from async_graph_bench.models.multi_vllm_instances.worker_client import WorkerClient
 
 log = logging.getLogger(__name__)
 

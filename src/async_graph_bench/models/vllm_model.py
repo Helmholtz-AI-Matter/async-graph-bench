@@ -23,8 +23,12 @@ import gc
 import inspect
 from typing import List, Union, Dict, Any
 
-from . import Model, GenerationParameters
-from .vllm_response_wrapper import VLLMResponseWrapper, ReasoningParserMode
+from async_graph_bench.models.abstract_classes import Model
+from async_graph_bench.models.generation_parameters import GenerationParameters
+from async_graph_bench.models.vllm_response_wrapper import (
+    VLLMResponseWrapper,
+    ReasoningParserMode,
+)
 
 
 def normalize_chat_input(

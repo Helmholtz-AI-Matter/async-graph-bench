@@ -1,7 +1,7 @@
 from asyncio import Lock
 from collections import deque
 
-from ...utils.end_of_data import EndOfData
+from async_graph_bench.utils.end_of_data import EndOfData
 
 
 def batching(generator, batch_size):

@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from ...utils import ResourcePool, acquire_from_many
-from ...utils.end_of_data import EndOfData
+from async_graph_bench.utils import ResourcePool, acquire_from_many
+from async_graph_bench.utils.end_of_data import EndOfData
 
 log = logging.getLogger(__name__)
 

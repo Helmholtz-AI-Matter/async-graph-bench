@@ -7,8 +7,10 @@ from typing import Any, Dict, List, Optional
 import aioprocessing
 import torch
 
-from .encoder_worker import _encoder_worker_main
-from ..multi_vllm_instances.worker_client import WorkerClient
+from async_graph_bench.models.multi_nli_instances.encoder_worker import (
+    _encoder_worker_main,
+)
+from async_graph_bench.models.multi_vllm_instances.worker_client import WorkerClient
 
 log = logging.getLogger(__name__)
 

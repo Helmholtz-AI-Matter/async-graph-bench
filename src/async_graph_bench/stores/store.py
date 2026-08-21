@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Iterator, Tuple, Any, Dict
 
-from ..data_source import Id
+from async_graph_bench.data_source import Id
 
 
 class DataStore(ABC):

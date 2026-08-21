@@ -4,7 +4,7 @@ from typing import Optional, Any, Iterator, Tuple
 
 import pandas as pd
 
-from .store import DataStore
+from async_graph_bench.stores.store import DataStore
 
 
 class InMemoryStore(DataStore):

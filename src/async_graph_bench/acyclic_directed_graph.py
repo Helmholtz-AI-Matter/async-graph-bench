@@ -2,8 +2,8 @@ import logging
 from collections import defaultdict, deque
 from typing import Set, List, DefaultDict, Dict, Tuple, Union
 
-from .data_source import DataSource
-from .node_config import NodeConfig
+from async_graph_bench.data_source import DataSource
+from async_graph_bench.node_config import NodeConfig
 
 log = logging.getLogger(__name__)
 

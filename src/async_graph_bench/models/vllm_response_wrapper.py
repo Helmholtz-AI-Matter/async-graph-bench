@@ -7,8 +7,8 @@ if importlib.util.find_spec("torch") is None:
         "To use this functionality, you need to install the 'torch' module"
     )
 
-from . import ResponseWrapper
-from .reasoning_parsers import (
+from async_graph_bench.models.abstract_classes import ResponseWrapper
+from async_graph_bench.models.reasoning_parsers import (
     parse_deepseek_reasoning,
     parse_mistral_reasoning,
     parse_gpt_oss_reasoning,

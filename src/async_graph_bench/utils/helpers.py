@@ -8,9 +8,9 @@ from typing import Any, Generator, Iterable, List, Tuple
 
 from bitarray import bitarray
 
-from ..node_config import NodeConfig
-from ..stores.combined_id import get_combined_id_from_parts
-from ..stores.store import DataStore
+from async_graph_bench.node_config import NodeConfig
+from async_graph_bench.stores.combined_id import get_combined_id_from_parts
+from async_graph_bench.stores.store import DataStore
 
 
 def get_resolved_keys(

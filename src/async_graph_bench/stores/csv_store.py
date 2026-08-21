@@ -2,7 +2,7 @@ import ast
 import csv
 from typing import Optional
 
-from .in_memory_store import InMemoryStore
+from async_graph_bench.stores.in_memory_store import InMemoryStore
 
 
 def safe_literal_eval(value: str):
