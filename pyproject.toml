@@ -13,7 +13,19 @@ keywords = ["benchmark", "reproducibility", "performance", "async", "workflow", 
 license = { file = "LICENSE.md" }
 
 requires-python = ">=3.11"
-dynamic = ["dependencies"]
+dependencies = [
+    "async_graph_data_flow==1.6.0",
+    "bitarray==3.3.0",
+    "diskcache==5.6.3",
+    "graphviz==0.20.3",
+    "msgpack_python==0.5.6",
+    "numpy<1.28",
+    "pandas==2.3.2",
+    "tqdm==4.67.1",
+    "zstd==1.5.6.2",
+    "aioprocessing",
+    "cachetools",
+]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -33,11 +45,9 @@ classifiers = [
 #"Bug Tracker" = "https://github.com/muelphil/async_graph_bench/issues"
 #"Repository" = "https://github.com/muelphil/async_graph_bench"
 
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
-
 [project.optional-dependencies]
 vllm = ["vllm>0.19"]
+# remote-vllm = ["aiohttp>=3.13.3,<4"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
