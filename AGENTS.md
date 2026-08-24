@@ -11,7 +11,8 @@ To ensure scientific integrity and reproducibility, all contributions must adher
     *   No naked `pip install`. Use `pyproject.toml` or `requirements.txt`.
     *   Prefer explicit version pinning for scientific libraries (e.g., `numpy==1.26.0`) to prevent breaking changes in numerical results.
 2.  **Rigorous Testing**:
-    *   Every new feature or bug fix must include a corresponding unit test in `/tests`. Note, unit tests in `/tests` should only cover functionality that is provided by `/src/async_graph_bench`. Ignore any code in the `/examples` folder when considering to write tests. The examples can have their own unit tests.
+    *   Every new feature or bug fix must include a corresponding unit test in `/tests`. Note, unit tests in `/tests` should only cover functionality that is provided by `/src/async_graph_bench`. Ignore any code in the `/examples` folder when considering to write tests. The examples can have their own unit tests if required.
+    *   Make sure that all example packages provided in subfolders of `/examples` work, i.e. they can be installed in separate virtual environments and executing them does not produce errors messages.
     *   Focus on **edge cases** and **numerical stability** (use `pytest.approx` for floating point comparisons).
 3.  **CI/CD Integration**:
     * All changes must be compatible with the GitHub Actions workflow.
