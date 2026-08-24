@@ -86,6 +86,10 @@ These nodes **sample** the items for the dependency `sum` to estimate variance a
 
 ## Tests
 
+**Use a dedicated virtual environment for this example.** Do not reuse the
+environment of another example. Install the main library into that
+environment before running the tests.
+
 The example tests are in `tests/` and can be run from the repository root:
 
 ```bash

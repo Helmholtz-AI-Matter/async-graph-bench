@@ -20,6 +20,10 @@ the fast CI tests.
 
 ## Tests
 
+**Use a dedicated virtual environment for this example.** Do not reuse the
+environment of another example. Install the main library and this example's
+requirements into that environment before running the tests.
+
 The tests are in `tests/` and can be run from the repository root:
 
 ```bash

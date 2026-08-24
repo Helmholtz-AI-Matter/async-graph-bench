@@ -93,6 +93,10 @@ The workflow demonstrates how you can:
 
 ## Tests
 
+**Use a dedicated virtual environment for this example.** Do not reuse the
+environment of another example. Install the main library and
+`requirements.txt` into that environment before running the tests.
+
 The tests are in `tests/` and can be run from the repository root:
 
 ```bash

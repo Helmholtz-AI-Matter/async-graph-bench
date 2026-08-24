@@ -108,3 +108,35 @@ installs the main library into it. Fast example tests run for pull requests;
 slow example tests run once daily or through `workflow_dispatch`. Slow tests
 require the vLLM dependencies and may download the tiny model into the
 Hugging Face cache.
+
+### Managing Example Test Environments
+
+Use an individual virtual environment for each example. This keeps example
+dependencies isolated and verifies that the example works with the installed
+main library rather than relying on packages from another environment.
+
+From the repository root, replace `resource_benchmark` with the example you
+want to test:
+
+```bash
+example=resource_benchmark
+python -m venv "examples/$example/.venv"
+source "examples/$example/.venv/bin/activate"
+python -m pip install --upgrade pip
+python -m pip install -e .
+if [ -f "examples/$example/requirements.txt" ]; then
+    python -m pip install -r "examples/$example/requirements.txt"
+fi
+python -m pip install pytest pytest-asyncio
+pytest "examples/$example/tests" -m "not slow"
+deactivate
+```
+
+For PowerShell, activate the environment with:
+
+```powershell
+examples\resource_benchmark\.venv\Scripts\Activate.ps1
+```
+
+The `.venv` directories are ignored by Git. GitHub Actions creates these
+individual environments automatically for the example test jobs.
