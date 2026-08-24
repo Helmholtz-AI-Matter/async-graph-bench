@@ -79,3 +79,32 @@ Consider to execute the checks below to keep the code you contribute clean. All 
 | Lint code | `ruff check` |
 | Auto-fix lint issues | `ruff check --fix` |
 | Format code | `ruff format` |
+
+**Example Tests**
+
+Each use case in `examples/` has its own pytest tests under a local `tests/`
+directory. The tests are designed to validate the examples without requiring
+external LLM services during fast checks.
+
+Run the fast tests for one example with:
+
+```bash
+pytest examples/<example>/tests -m "not slow"
+```
+
+Run the slow integration tests with:
+
+```bash
+pytest examples/<example>/tests -m slow
+```
+
+Fast tests use deterministic mock resources and also exercise the CLI help
+paths where an example provides a CLI. Slow tests use the tiny random vLLM
+model for the LLM examples. The `min_working_example` slow test uses its real
+`DummyNoiseResource` instead.
+
+GitHub Actions creates a separate virtual environment for each example and
+installs the main library into it. Fast example tests run for pull requests;
+slow example tests run once daily or through `workflow_dispatch`. Slow tests
+require the vLLM dependencies and may download the tiny model into the
+Hugging Face cache.

@@ -82,7 +82,19 @@ These nodes **sample** the items for the dependency `sum` to estimate variance a
 
     * View generated CSV data in `./data/`
     * Open `execution_graph.svg` to see the visual graph
-    * Review benchmark summary in `report.csv`
+     * Review benchmark summary in `report.csv`
+
+## Tests
+
+The example tests are in `tests/` and can be run from the repository root:
+
+```bash
+pytest examples/min_working_example/tests -m "not slow"
+```
+
+The fast tests use a zero-noise mock resource to validate the graph nodes.
+The slow integration test runs the complete example with the real
+`DummyNoiseResource`, using one iteration and temporary output files.
 
 ---
 

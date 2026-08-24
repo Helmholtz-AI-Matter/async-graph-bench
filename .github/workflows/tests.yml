@@ -40,7 +40,84 @@ jobs:
         run: pytest -m "not slow"
 
       - name: Run slow integration tests
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') 
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.python-version == '3.12'
         run: pytest -m slow
+        env:
+          HF_HUB_CACHE: ~/.cache/huggingface
+
+  examples-fast:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example:
+          - min_working_example
+          - random_number
+          - multi_resource_test
+          - resource_benchmark
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Create example virtual environment
+        run: python -m venv examples/${{ matrix.example }}/.venv
+
+      - name: Install package and example test dependencies
+        run: |
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install -e .
+          if [ -f "examples/${{ matrix.example }}/requirements.txt" ]; then
+            examples/${{ matrix.example }}/.venv/bin/python -m pip install \
+              -r "examples/${{ matrix.example }}/requirements.txt"
+          fi
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install pytest pytest-asyncio
+
+      - name: Run fast example tests
+        run: examples/${{ matrix.example }}/.venv/bin/pytest examples/${{ matrix.example }}/tests -m "not slow"
+
+  examples-slow:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example:
+          - min_working_example
+          - random_number
+          - multi_resource_test
+          - resource_benchmark
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Create example virtual environment
+        run: python -m venv examples/${{ matrix.example }}/.venv
+
+      - name: Install package and slow-test dependencies
+        run: |
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip
+          if [[ "${{ matrix.example }}" == "min_working_example" ]]; then
+            examples/${{ matrix.example }}/.venv/bin/python -m pip install \
+              -e . pytest pytest-asyncio
+          else
+            examples/${{ matrix.example }}/.venv/bin/python -m pip install uv
+            examples/${{ matrix.example }}/.venv/bin/uv pip install \
+              --python examples/${{ matrix.example }}/.venv/bin/python \
+              --extra-index-url https://wheels.vllm.ai/0.27.1/cpu \
+              --torch-backend cpu \
+              -e ".[dev]"
+            examples/${{ matrix.example }}/.venv/bin/python -m pip install \
+              -r "examples/${{ matrix.example }}/requirements.txt"
+          fi
+
+      - name: Run slow example tests
+        run: examples/${{ matrix.example }}/.venv/bin/pytest examples/${{ matrix.example }}/tests -m slow
         env:
           HF_HUB_CACHE: ~/.cache/huggingface

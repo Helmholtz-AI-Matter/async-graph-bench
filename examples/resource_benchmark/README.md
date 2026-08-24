@@ -91,6 +91,19 @@ The workflow demonstrates how you can:
     * Open `execution_graph.svg` for a visual overview of the benchmark
     * Review the console output and `benchmark.csv` for detailed statistics
 
+## Tests
+
+The tests are in `tests/` and can be run from the repository root:
+
+```bash
+pytest examples/resource_benchmark/tests -m "not slow"
+```
+
+Fast tests use a deterministic mock model and exercise the CLI help path
+without contacting an endpoint. The slow integration test uses the tiny
+random vLLM model and validates response and token-length collection. It does
+not start the multi-instance GPU benchmark.
+
 ---
 
 ## ⚙️ Metrics and Reporting
