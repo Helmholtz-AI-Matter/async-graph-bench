@@ -2,6 +2,9 @@ name: Run Unit Tests
 
 on:
   pull_request:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -34,6 +37,7 @@ jobs:
         run: pytest
 
       - name: Run slow integration tests
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: pytest -m slow
         env:
           HF_HUB_CACHE: ~/.cache/huggingface
