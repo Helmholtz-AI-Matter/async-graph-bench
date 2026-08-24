@@ -9,13 +9,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Python 3.12
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
@@ -34,10 +37,10 @@ jobs:
             ${{ runner.os }}-huggingface-
 
       - name: Run unit tests
-        run: pytest
+        run: pytest -m "not slow"
 
       - name: Run slow integration tests
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.python-version == '3.12'
         run: pytest -m slow
         env:
           HF_HUB_CACHE: ~/.cache/huggingface
