@@ -71,7 +71,7 @@ jobs:
       - name: Install package and example test dependencies
         run: |
           source examples/${{ matrix.example }}/.venv/bin/activate
-          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip uv
+          python -m pip install --upgrade pip uv
           examples/${{ matrix.example }}/.venv/bin/uv pip install -e .
           if [ -f "examples/${{ matrix.example }}/requirements.txt" ]; then
             examples/${{ matrix.example }}/.venv/uv pip install \
@@ -108,7 +108,7 @@ jobs:
       - name: Install package and slow-test dependencies
         run: |
           source examples/${{ matrix.example }}/.venv/bin/activate
-          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip uv
+          python -m pip install --upgrade pip uv
           if [[ "${{ matrix.example }}" == "min_working_example" ]]; then
             examples/${{ matrix.example }}/.venv/bin/uv pip install \
               -e . pytest pytest-asyncio
