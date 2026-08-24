@@ -102,19 +102,20 @@ jobs:
 
       - name: Install package and slow-test dependencies
         run: |
-          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip uv
           if [[ "${{ matrix.example }}" == "min_working_example" ]]; then
-            examples/${{ matrix.example }}/.venv/bin/python -m pip install \
+            examples/${{ matrix.example }}/.venv/bin/uv pip install \
               -e . pytest pytest-asyncio
           else
-            examples/${{ matrix.example }}/.venv/bin/python -m pip install uv
             examples/${{ matrix.example }}/.venv/bin/uv pip install \
               --python examples/${{ matrix.example }}/.venv/bin/python \
               --extra-index-url https://wheels.vllm.ai/0.27.1/cpu \
               --torch-backend cpu \
               -e ".[dev]"
-            examples/${{ matrix.example }}/.venv/bin/python -m pip install \
+            examples/${{ matrix.example }}/.venv/bin/uv pip install \
               -r "examples/${{ matrix.example }}/requirements.txt"
+            examples/${{ matrix.example }}/.venv/bin/uv pip install \
+              distutils
           fi
 
       - name: Run slow example tests
