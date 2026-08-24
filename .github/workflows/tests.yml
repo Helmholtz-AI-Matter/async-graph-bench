@@ -68,13 +68,13 @@ jobs:
 
       - name: Install package and example test dependencies
         run: |
-          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip
-          examples/${{ matrix.example }}/.venv/bin/python -m pip install -e .
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install --upgrade pip uv
+          examples/${{ matrix.example }}/.venv/bin/uv pip install -e .
           if [ -f "examples/${{ matrix.example }}/requirements.txt" ]; then
             examples/${{ matrix.example }}/.venv/bin/python -m pip install \
               -r "examples/${{ matrix.example }}/requirements.txt"
           fi
-          examples/${{ matrix.example }}/.venv/bin/python -m pip install pytest pytest-asyncio
+          examples/${{ matrix.example }}/.venv/bin/python -m pip install pytest pytest-asyncio distutils
 
       - name: Run fast example tests
         run: examples/${{ matrix.example }}/.venv/bin/pytest examples/${{ matrix.example }}/tests -m "not slow"
