@@ -66,10 +66,12 @@ uv pip install --extra-index-url https://wheels.vllm.ai/0.27.1/cpu --torch-backe
 ```
 
 For a regular vLLM installation, use `pip install -e ".[vllm]"` and select the
-appropriate vLLM and PyTorch wheels for your hardware.
+appropriate vLLM and PyTorch wheels for your hardware (with `uv`, consider to use the `--torch-backend` CLI parameter).
 For more vllm installation hints, see [here](https://vllm.ai/).
 
-**Run CI Checks Locally**
+**Code Hygiene**
+
+Consider to execute the checks below to keep the code you contribute clean. All tooling will be installed with the `dev` installation target.
 
 | Check | Command |
 |---|---|
