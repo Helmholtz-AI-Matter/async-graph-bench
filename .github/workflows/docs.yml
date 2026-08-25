@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build-docs:
-    if: github.repository == 'steinb95/async-graph-bench'
+    if: github.repository == 'Helmholtz-AI-Matter/async-graph-bench'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
