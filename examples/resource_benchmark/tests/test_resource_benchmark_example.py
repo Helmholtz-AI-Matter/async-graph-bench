@@ -1,11 +1,21 @@
 import os
 import subprocess
 import sys
+from unittest.mock import patch
 
 import pytest
 
 from examples.resource_benchmark.query_model import QueryModel
 from examples.test_support import FakeModel
+
+
+def test_run_module_does_not_require_gputil():
+    example_dir = os.path.dirname(os.path.dirname(__file__))
+    with (
+        patch.dict(sys.modules, {"GPUtil": None}),
+        patch("sys.path", [example_dir, *sys.path]),
+    ):
+        __import__("run")
 
 
 def test_cli_help():

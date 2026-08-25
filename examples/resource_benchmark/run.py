@@ -2,7 +2,6 @@ import argparse
 import os
 import sys
 
-import GPUtil
 from dotenv import load_dotenv
 
 from async_graph_bench import BenchmarkManager, NodeConfig
@@ -144,6 +143,8 @@ def main(argv) -> int:
         )
 
     else:  # offline vllm multi instance
+        import GPUtil
+
         models.append(args.model)
         device_count = len(GPUtil.getAvailable())
         amount_models = device_count / args.llm_args["tensor_parallel_size"]
