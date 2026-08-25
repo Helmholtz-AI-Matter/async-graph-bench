@@ -12,8 +12,8 @@ import sys
 sys.path.insert(0, os.path.abspath("../../src"))
 
 project = "async_graph_benchmarking"
-copyright = "2025, Philip Müller"
-author = "Philip Müller"
+copyright = "2025-2026, Philip Müller, Peter Steinbach"
+author = "Philip Müller, Peter Steinbach"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
