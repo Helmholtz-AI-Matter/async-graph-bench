@@ -1,5 +1,6 @@
-import os
+from pathlib import Path
 
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 classes = [
     ("async_graph_bench.data_source", "DataSource"),
@@ -17,12 +18,12 @@ classes = [
     # e.g. ("async_graph_bench.executor", "Executor"),
 ]
 
-output_dir = "source/api"
-os.makedirs(output_dir, exist_ok=True)
+output_dir = REPOSITORY_ROOT / "docs" / "source" / "api"
+output_dir.mkdir(parents=True, exist_ok=True)
 
 for module, cls in classes:
-    filename = os.path.join(output_dir, f"{cls.lower()}.md")
-    with open(filename, "w") as f:
+    filename = output_dir / f"{cls.lower()}.md"
+    with filename.open("w") as f:
         f.write(f"# `{cls}`\n\n")
         f.write("```{eval-rst}\n")
         f.write(f".. autoclass:: {module}.{cls}\n")
