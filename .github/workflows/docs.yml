@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build-docs:
-    if: github.repository == 'steinb95/async-graph-bench'
+    if: github.repository == 'Helmholtz-AI-Matter/async-graph-bench'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,6 @@ jobs:
 
       - name: Generate API docs
         run: python docs/generate_api.py
-        working-directory: docs
 
       - name: Build Sphinx documentation
         run: sphinx-build -b html docs/source docs/build/html
@@ -50,6 +49,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
