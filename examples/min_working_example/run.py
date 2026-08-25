@@ -1,5 +1,6 @@
 import gc
 import logging
+import os
 import random
 import statistics
 import time
@@ -163,7 +164,7 @@ if __name__ == "__main__":
         AdditionCalculator(),
     ]
 
-    iterations = 25
+    iterations = int(os.environ.get("ASYNC_GRAPH_EXAMPLE_ITERATIONS", "25"))
 
     consumer_nodes = [
         # in the consumer_nodes array, all NodeConfigs will receive greedy=True und data_store=CSVDataStore
@@ -197,7 +198,7 @@ if __name__ == "__main__":
         data_source=data_source,
         nodes=nodes,
         consumer_nodes=consumer_nodes,
-        data_storage_path="data",
+        data_storage_path=os.environ.get("ASYNC_GRAPH_EXAMPLE_DATA_PATH", "data"),
         show_progress_bars=True,
         halt_on_exception=True,
         raise_exceptions=True,

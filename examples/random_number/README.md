@@ -87,7 +87,23 @@ OPENAI_API_ENDPOINT_MODEL="gpt-3.5-turbo"
 
    * Check the `./data/` folder for intermediate JSON results
    * Open `execution_graph.svg` to visualize the graph
-   * Review the console output for prompt accuracy
+    * Review the console output for prompt accuracy
+
+## Tests
+
+**Use a dedicated virtual environment for this example.** Do not reuse the
+environment of another example. Install the main library and this example's
+requirements into that environment before running the tests.
+
+The tests are in `tests/` and can be run from the repository root:
+
+```bash
+pytest examples/random_number/tests -m "not slow"
+```
+
+Fast tests validate the response extractors and graph node with a deterministic
+mock model, so they do not call an external API. The slow integration test
+uses the tiny random vLLM model and validates the response-generation path.
 
 ---
 
