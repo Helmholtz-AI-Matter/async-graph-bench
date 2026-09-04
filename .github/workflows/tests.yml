@@ -108,6 +108,10 @@ jobs:
           python -m pip install uv
           uv venv examples/${{ matrix.example }}/.venv --python "$(which python)"
 
+      - name: Install Graphviz
+        if: matrix.example == 'min_working_example'
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends graphviz
+
       - name: Install package and slow-test dependencies
         run: |
           if [[ "${{ matrix.example }}" == "min_working_example" ]]; then
