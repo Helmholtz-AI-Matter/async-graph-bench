@@ -150,6 +150,8 @@ class BenchmarkRun:
             data_source=self.adg.data_source.iter_items,
             iterations=self.iterations,
             iterations_first=self.iterations_first,
+            # '_idx' by id: skipping stays correct if iter_items() and iter_ids() yield different orders
+            item_index=self.data_source_item_index,
         ).execute
 
         if self.data_source_idx_skip_table.count(1):
