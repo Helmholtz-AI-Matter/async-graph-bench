@@ -13,7 +13,7 @@ The **model abstraction** provides a unified interface for querying language mod
 The framework currently includes two main implementations:
 
 * **`VLLMModel`** — uses a local or remote [vLLM](https://vllm.ai) server for high-performance inference.
-* **`OpenAIAPIModel`** — queries OpenAI-compatible endpoints using the standard API format.
+* **`OpenAIAPIModel`** — queries OpenAI-compatible endpoints using the standard API format. `max_retries` (default 5) and `timeout` (seconds; default: the OpenAI client's default) configure the underlying client, e.g. more retries for rate-limited (HTTP 429) gateways or a longer timeout for slow reasoning models.
 
 Additionally, the package `async_graph_bench.models.multi_instance.vllm` supports **running multiple vLLM instances in parallel**, each in its own process, to distribute inference across hardware resources efficiently.
 
