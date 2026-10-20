@@ -137,7 +137,7 @@ Here’s the updated table with uncertain or conditional availability replaced w
 | ------------------------------------- | --------- |----------------------------------------------------|
 | `get_messages()`                      | ✅         | ✅                                                  |
 | `get_assistant_messages()`            | ✅         | ✅                                                  |
-| `get_reasoning_messages()`            | ✅         | ✅ (reasoning_content in singular segment)          |
+| `get_reasoning_messages()`            | ✅         | ✅ (single segment from `reasoning_content`, `reasoning` or inline `<think>`; inline reasoning is removed from `get_messages()`) |
 | `get_tokens()`                        | ✅         | ✅              |
 | `get_reasoning_tokens()`              | ✅         | ⛔                                                  |
 | `get_assistant_tokens()`              | ✅         | ✅                                                  |
