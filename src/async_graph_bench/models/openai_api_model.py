@@ -95,16 +95,25 @@ class OpenAIAPIModel(Model):
         openai_endpoint: str = None,
         limit_logprobs: bool = False,
         use_chat: bool = True,
+        max_retries: int = 5,
+        timeout: float | None = None,
     ):
         """
         use_chat: True => call chat.completions.create with `messages=...`
                   False => call completions.create with `prompt=...`
+        max_retries: retries of the OpenAI client per request (connection errors, 408/409/429/5xx), with the
+                  client's exponential backoff
+        timeout: request timeout in seconds (an httpx.Timeout is passed through as well); None => the OpenAI
+                  client's default
         """
         self.model_id = model_id
         api_key = openai_api_key or os.environ.get("OPENAI_API_KEY", None)
         base_url = openai_endpoint or os.environ.get("OPENAI_BASE_URL", None)
         assert api_key is not None, "No API key provided"
-        self.openai_api = AsyncOpenAI(api_key=api_key, base_url=base_url, max_retries=5)
+        client_kwargs = {"timeout": timeout} if timeout is not None else {}
+        self.openai_api = AsyncOpenAI(
+            api_key=api_key, base_url=base_url, max_retries=max_retries, **client_kwargs
+        )
         self.limit_logprobs = limit_logprobs
         self.use_chat = use_chat
 
