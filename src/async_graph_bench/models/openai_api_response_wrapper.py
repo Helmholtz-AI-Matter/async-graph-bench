@@ -17,6 +17,36 @@ def decode_whitespace(str: str) -> str:
     return str.replace("Ġ", " ").replace("Ċ", " ").replace("▁", " ")
 
 
+THINK_OPEN, THINK_CLOSE = "<think>", "</think>"
+
+
+def split_reasoning(message) -> tuple[str, str]:
+    """Split a chat completion message into ``(reasoning, answer)``.
+
+    OpenAI-compatible servers return reasoning in different places, which are checked in order:
+
+    1. ``message.reasoning_content`` (e.g. vLLM before 0.10, DeepSeek API),
+    2. ``message.reasoning`` (e.g. newer vLLM, OpenRouter; available as an extra field on the message),
+    3. inline in the content as ``<think>...</think>`` before the answer (server without reasoning parser).
+
+    Inline reasoning is removed from the answer. Returns empty strings for missing parts.
+    """
+    extra = getattr(message, "model_extra", None) or {}
+    reasoning = (
+        getattr(message, "reasoning_content", None)
+        or getattr(message, "reasoning", None)
+        or extra.get("reasoning_content")
+        or extra.get("reasoning")
+        or ""
+    )
+    content = message.content or ""
+    if THINK_CLOSE in content:
+        inline, content = content.split(THINK_CLOSE, 1)
+        reasoning = reasoning or inline.replace(THINK_OPEN, "", 1)
+        content = content.lstrip()
+    return reasoning.strip(), content
+
+
 class OpenAIAPIResponseWrapper(ResponseWrapper):
     def get_token_ids(self) -> List[List[int]]:
         token_ids = [c.token_ids for r in self.responses for c in r.choices]
@@ -43,8 +73,9 @@ class OpenAIAPIResponseWrapper(ResponseWrapper):
         self.has_logprobs = None
 
     def get_messages(self) -> List[str]:
+        """Return the answer of each choice; inline ``<think>`` reasoning is removed (see `split_reasoning`)."""
         return [
-            choice.message.content
+            split_reasoning(choice.message)[1]
             for response in self.responses
             for choice in response.choices
         ]
@@ -128,11 +159,9 @@ class OpenAIAPIResponseWrapper(ResponseWrapper):
         return self.get_messages()
 
     def get_reasoning_messages(self) -> List[List[str]]:
-        """Return reasoning segments (if available)."""
+        """Return reasoning segments per choice (empty list if none); see `split_reasoning` for the sources."""
         return [
-            [c.message.reasoning_content]
-            if getattr(c.message, "reasoning_content", None)
-            else []
+            [reasoning] if (reasoning := split_reasoning(c.message)[0]) else []
             for r in self.responses
             for c in r.choices
         ]
