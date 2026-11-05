@@ -25,6 +25,7 @@ from typing import List, Union, Dict, Any
 
 from async_graph_bench.models.abstract_classes import Model
 from async_graph_bench.models.generation_parameters import GenerationParameters
+from async_graph_bench.models.harmony_structured_outputs import harmony_structural_tag
 from async_graph_bench.models.vllm_response_wrapper import (
     VLLMResponseWrapper,
     ReasoningParserMode,
@@ -50,11 +51,22 @@ def normalize_chat_input(
 
 def sampling_params_from_generation_params(
     generation_params: GenerationParameters,
+    reasoning_parser_mode: ReasoningParserMode = None,
 ) -> SamplingParams:
+    """vLLM SamplingParams from GenerationParameters.
+
+    For gpt-oss (``reasoning_parser_mode="gpt-oss"``) a ``response_format`` becomes a Harmony structural tag, so
+    the constraint applies only to the final channel and the model can still reason first (see
+    ``harmony_structured_outputs``). Other models get the plain constraint.
+    """
     params_dict = generation_params.to_dict()
     if "response_format" in params_dict:
         response_format = params_dict["response_format"]
-        if response_format["type"] == "json_schema":
+        if reasoning_parser_mode == "gpt-oss":
+            guided_decoding_params = StructuredOutputsParams(
+                structural_tag=harmony_structural_tag(response_format)
+            )
+        elif response_format["type"] == "json_schema":
             guided_decoding_params = StructuredOutputsParams(
                 json=response_format["json_schema"]
             )
@@ -110,7 +122,7 @@ class VLLMModel(Model):
 
         query_kwargs = {
             "sampling_params": sampling_params_from_generation_params(
-                generation_params
+                generation_params, self.reasoning_parser_mode
             ),
             "use_tqdm": False,
         }
