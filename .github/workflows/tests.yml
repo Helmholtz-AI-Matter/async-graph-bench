@@ -36,12 +36,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-huggingface-
 
+      # tests/test_vllm_model_integration.py is excluded: since 2026-11-04 the vLLM CPU engine fails to start on the
+      # GitHub runner (vllm/_C.abi3.so: "cannot enable executable stack"). Run it locally / on a GPU machine.
       - name: Run unit tests
-        run: pytest -m "not slow"
+        run: pytest -m "not slow" --ignore=tests/test_vllm_model_integration.py
 
       - name: Run slow integration tests
         if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.python-version == '3.12'
-        run: pytest -m slow
+        run: pytest -m slow --ignore=tests/test_vllm_model_integration.py
         env:
           HF_HUB_CACHE: ~/.cache/huggingface
 
@@ -93,7 +95,8 @@ jobs:
         example:
           - min_working_example
           - random_number
-          - multi_resource_test
+          # multi_resource_test removed: its only slow test starts the vLLM CPU engine, which fails on the
+          # GitHub runner since 2026-11-04 ("cannot enable executable stack")
           - resource_benchmark
     steps:
       - uses: actions/checkout@v7
