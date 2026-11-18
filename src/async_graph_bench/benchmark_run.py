@@ -212,9 +212,6 @@ class BenchmarkRun:
                 )
                 generator = with_resources(generator, resources)
 
-            if args["max_tasks"] > 1:
-                generator = coordinated_end_of_data(generator, node_config.id)
-
             if node_config.batch_size and node_config.batch_size > 1:
                 generator = batching(generator, batch_size=node_config.batch_size)
 
@@ -285,6 +282,14 @@ class BenchmarkRun:
             if skip_table:
                 if skip_table.any() and skip_table != self.data_source_idx_skip_table:
                     generator = skip_indices(generator, skip_table)
+
+            # Outermost per-task layer: EndOfData is held until no task of this node is between taking an
+            # item from its queue and handing its last output downstream. Placed further inside, items that
+            # an inner layer emits without calling the node (cached results from data_cache) were not
+            # counted, and EndOfData could overtake them in a full downstream queue.
+            # multi_incoming_node stays outside: it lets EndOfData through once, after all parents sent it.
+            if args["max_tasks"] > 1:
+                generator = coordinated_end_of_data(generator, node_config.id)
 
             if self.adg.count_parents(node_config) > 1:
                 generator = multi_incoming_node(
