@@ -182,4 +182,5 @@ cython_debug/
 /tmp/
 
 # Editor specific
-*~
+**/*.env
+**/*~

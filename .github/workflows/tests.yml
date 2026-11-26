@@ -1,5 +1,8 @@
 name: Run Unit Tests
 
+# Notes on the pinned runner image, the vLLM CPU executable-stack patch, and
+# the slow-test selection are in .github/workflows/README.md.
+
 on:
   pull_request:
   schedule:
@@ -8,7 +11,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -36,20 +39,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-huggingface-
 
-      # tests/test_vllm_model_integration.py is excluded: since 2026-11-04 the vLLM CPU engine fails to start on the
-      # GitHub runner (vllm/_C.abi3.so: "cannot enable executable stack"). Run it locally / on a GPU machine.
+      # The fast suite excludes tests/test_vllm_model_integration.py because its
+      # non-slow tests also start a vLLM engine and are expensive. The slow suite
+      # below runs that file's @pytest.mark.slow tests.
       - name: Run unit tests
         run: pytest -m "not slow" --ignore=tests/test_vllm_model_integration.py
 
+      # Required on Ubuntu 26.04+ (glibc >= 2.41); see .github/workflows/README.md.
+      - name: Make vLLM CPU extension loadable
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.python-version == '3.12'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y patchelf
+          SITE="$(python -c 'import pathlib, vllm; print(pathlib.Path(vllm.__file__).parent)')"
+          python .github/workflows/patch_vllm_execstack.py "$SITE"
+
+      # Do not ignore tests/test_vllm_model_integration.py here: its slow tests
+      # are the only `slow` markers under tests/.
       - name: Run slow integration tests
         if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.python-version == '3.12'
-        run: pytest -m slow --ignore=tests/test_vllm_model_integration.py
+        run: pytest -m slow
         env:
           HF_HUB_CACHE: ~/.cache/huggingface
 
   examples-fast:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         example:
@@ -89,14 +104,13 @@ jobs:
 
   examples-slow:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         example:
           - min_working_example
           - random_number
-          # multi_resource_test removed: its only slow test starts the vLLM CPU engine, which fails on the
-          # GitHub runner since 2026-11-04 ("cannot enable executable stack")
+          - multi_resource_test
           - resource_benchmark
     steps:
       - uses: actions/checkout@v7
@@ -131,6 +145,19 @@ jobs:
               --python examples/${{ matrix.example }}/.venv/bin/python \
               -r "examples/${{ matrix.example }}/requirements.txt"
           fi
+
+      # Required on Ubuntu 26.04+ (glibc >= 2.41); see .github/workflows/README.md.
+      - name: Make vLLM CPU extension loadable
+        run: |
+          PYTHON="examples/${{ matrix.example }}/.venv/bin/python"
+          if ! "$PYTHON" -c 'import vllm' 2>/dev/null; then
+            echo "vLLM is not installed for ${{ matrix.example }}; nothing to patch."
+            exit 0
+          fi
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y patchelf
+          SITE="$("$PYTHON" -c 'import pathlib, vllm; print(pathlib.Path(vllm.__file__).parent)')"
+          "$PYTHON" .github/workflows/patch_vllm_execstack.py "$SITE"
 
       - name: Run slow example tests
         run: examples/${{ matrix.example }}/.venv/bin/pytest examples/${{ matrix.example }}/tests -m slow
